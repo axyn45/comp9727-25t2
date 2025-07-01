@@ -6,7 +6,7 @@ In an era of abundant digital entertainment, players often face the paradox of c
 
 - [x] what's the domain and target user
 - [x] how many items presented and through what way
-- [ ] simulate user input
+- [x] simulate user input
 - [ ] address updating model and cold start
 - [ ] business consideration
 
@@ -36,8 +36,7 @@ With the web-based interface mentioned before, we can capture behavioral traits 
 
 While browsing games, a user may be given the basic information, such as the name, developer, price and category of a title. If a user would like to know more on a specific game, they may click the title and jump to the profile page of the game. The clicking action indicates that the user showed interest in this game, meaning it would be sensible to make more precise and personalized reommendation based on the current game title. This action will be logged and sent back to the backend to update/improve the model.
 
-Also [todo: like/wishlist action]
-
+Besides browsing and clicking, a user may also add games into wishlist if the title is appealing. This will give the wishlisted games a high weight for future recommendation, meaning games similar to the ones in the wishlist have a higher chance to be faved by the player.
 
 ## 2 Datasets
 - [ ] sufficient quality and quantity
