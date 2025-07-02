@@ -91,7 +91,57 @@ Also, a good recommender system makes the platform "stickier". When players feel
 - [ ] unrealistic data
 - [ ] overfit issue
 
-**Steam Video Game and Bundle Data**
+### 2.1 Steam Video Game and Bundle Data
+
+[Recommender Systems and Personalization Datasets](https://cseweb.ucsd.edu/~jmcauley/datasets.html) contains a collection of datasets that have been collected for research by Julian McAuley, UCSD. We will use the collection of [Steam Video Game and Bundle Data](https://cseweb.ucsd.edu/~jmcauley/datasets.html#steam_data) (especially the item metadata) as our primary datasets.
+
+These datasets contain reviews from the Steam video game platform, and information about which games were bundled together.
+
+In terms of this implementation, since we focus on building a content-based recommendation system, we will use item metadata as our primary training data source.
+
+Item metadata contains 32135 entries of different games on Steam. Each record consists of these data fields:
+
+- `publisher`: The publisher of the game. Typically same with `developer`.
+- `genres`: Classification of the game. Multiple values allowed.
+- `app_name`: 
+- `title`:
+- `url` 
+- `tags` 
+- `discount_price` 
+- `reviews_url` 
+- `specs` 
+- `price` 
+- `early_access` 
+- `id` 
+- `developer`
+
+Records are in (loose) json format unless specified otherwise, meaning they can be treated as python dictionary objects. A simple script to read json-formatted data is as follows:
+
+```python
+def parse(path):
+  g = gzip.open(path, 'r')
+  for l in g:
+    yield eval(l)
+```
+
+```json
+{
+  'publisher':'Kotoshiro',
+  'genres':[ 'Action', 'Casual', 'Indie', 'Simulation', 'Strategy'],
+  'app_name':'Lost Summoner Kitty',
+  'title':'Lost Summoner Kitty',
+  'url':'http://store.steampowered.com/app/761140/Lost_Summoner_Kitty/',
+  'release_date':'2018-01-04',
+  'tags':['Strategy', 'Action', 'Indie', 'Casual', 'Simulation'],
+  'discount_price':4.49,
+  'reviews_url':'http://steamcommunity.com/app/761140/reviews/?browsefilter=mostrecent&p=1',
+  'specs':['Single-player'],
+  'price':4.99,
+  'early_access':False,
+  'id':'761140',
+  'developer':'Kotoshiro'
+}
+```
 
 
 
