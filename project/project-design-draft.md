@@ -7,8 +7,8 @@ In an era of abundant digital entertainment, players often face the paradox of c
 - [x] what's the domain and target user
 - [x] how many items presented and through what way
 - [x] simulate user input
-- [ ] address updating model and cold start
-- [ ] business consideration
+- [x] address updating model and cold start
+- [x] business consideration
 
 ### 1.1 Project Domain
 
@@ -26,7 +26,7 @@ This system targets the players on game distribution platforms. Essentially we c
 
 ### 1.3 Delivery of Recommendation
 
-Ideally we're going to build a Web UI that allows gamers to interact with the system[^1] . Gamers will be presented with 10-20 games as tiles on the webpage, each with basic information displayed like game title, category/tags and overall rating (if applicable). By clicking on the tile, user can see the full description and some reviews (if applicable) of the game. 
+Ideally we're going to build a Web UI that allows gamers to interact with the system[^1]. Gamers will be presented with 10-20 games as tiles on the webpage, each with basic information displayed like game title, category/tags and overall rating (if applicable). By clicking on the tile, user can see the full description and some reviews (if applicable) of the game.
 
 [^1]: This is not guranteed and maybe replaced by a text-based simulated solution.
 
@@ -47,7 +47,6 @@ Updating a recommendation model in a live production environment requires a dyna
 1. **Incremental Training**: The core model itself is designed to be updated incrementally in this approach. Instead of being completely retrained, the model's parameters are adjusted with each new piece of data or with small mini-batches of recent data. As the pipline receives new user interactions, it transforms them into feature vectors. These vectors are then fed into the model's `partial_fit` (from scikit-learn) or equivalent function, which updates the model's weights without starting from scratch[^2].
 2. **Rapid, Automated Batch Retraining**: For some models that cannot be updated incrementally, the solution is to drastically shorten the retraining cycle. The system automatically triggers a full model retraining process on a much more frequent basis, such as every hour. This is made possible by a highly automated CI/CD (Continuous Integration/Continuous Deployment) pipeline for machine learning, often called "MLOps"[^3].
 
-
 [^2]: [What is Incremental Learning?](https://www.datacamp.com/blog/what-is-incremental-learning)
 
 [^3]: [Retraining Model During Deployment: Continuous Training and Continuous Testing](https://neptune.ai/blog/retraining-model-during-deployment-continuous-training-continuous-testing)
@@ -55,6 +54,7 @@ Updating a recommendation model in a live production environment requires a dyna
 ### 1.6 Addressing Cold Start
 
 In this system we can break down the cold start problem into 2 parts:
+
 - **New User Cold Start**: A new player signs up. The system knows nothing about their tastes and cannot provide personalized recommendations.
 - **New Item Cold Start**: A new game is released. It has no ratings or play history, so the system doesn't know who to recommend it to.
 
@@ -83,33 +83,39 @@ Also, a good recommender system makes the platform "stickier". When players feel
 [^5]: [Lifetime value](https://www.optimizely.com/optimization-glossary/lifetime-value)
 
 ## 2 Datasets
+
+- [ ] describe the dataset
 - [ ] sufficient quality and quantity
 - [ ] which field is helpful in which way
 - [ ] limited breadth
 - [ ] unrealistic data
 - [ ] overfit issue
 
+**Steam Video Game and Bundle Data**
+
+
+
 ## 3 Methods
+
 - [ ] propose different methods
-    - [ ] different types of RS
-    - [ ] propose an approach
-        - [ ] different methods or combined
+  - [ ] different types of RS
+  - [ ] propose an approach
+    - [ ] different methods or combined
 - [ ] justify their suitability
-    - [ ] evaluate methods and system
+  - [ ] evaluate methods and system
 
 ## 4 Evaluation
+
 - [ ] suitable metrics
-    - [ ] for model
-    - [ ] for system
+  - [ ] for model
+  - [ ] for system
 - [ ] identify the most important metric
 - [ ] tradoffs between different metrics
 - [ ] consideration for choosing the best model/system
 - [ ] computational requirements
-    - [ ] real-life practicability
-    - [ ] dynamically updated
+  - [ ] real-life practicability
+  - [ ] dynamically updated
 - [ ] user study
-    - [ ] real users
-    - [ ] simulated UI
-    - [ ] feedback (e.g. questionaire)
-
-
+  - [ ] real users
+  - [ ] simulated UI
+  - [ ] feedback (e.g. questionaire)
