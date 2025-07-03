@@ -84,12 +84,12 @@ Also, a good recommender system makes the platform "stickier". When players feel
 
 ## 2 Datasets
 
-- [ ] describe the dataset
-- [ ] sufficient quality and quantity
-- [ ] which field is helpful in which way
-- [ ] limited breadth
+- [x] describe the dataset
+- [x] sufficient quality and quantity
+- [x] which field is helpful in which way
+- [x] limited breadth
 - [ ] unrealistic data
-- [ ] overfit issue
+- [x] overfit issue
 
 ### 2.1 Steam Video Game and Bundle Data
 
@@ -99,32 +99,15 @@ These datasets contain reviews from the Steam video game platform, and informati
 
 In terms of this implementation, since we focus on building a content-based recommendation system, we will use item metadata as our primary training data source.
 
-Item metadata contains 32135 entries of different games on Steam. Each record consists of these data fields:
+Item metadata contains 32135 entries of different games on Steam. Each record consists of these key data fields:
 
-- `publisher`: The publisher of the game. Typically same with `developer`.
-- `genres`: Classification of the game. Multiple values allowed.
-- `app_name`: 
-- `title`:
-- `url` 
-- `tags` 
-- `discount_price` 
-- `reviews_url` 
-- `specs` 
-- `price` 
-- `early_access` 
-- `id` 
-- `developer`
-
-Records are in (loose) json format unless specified otherwise, meaning they can be treated as python dictionary objects. A simple script to read json-formatted data is as follows:
-
-```python
-def parse(path):
-  g = gzip.open(path, 'r')
-  for l in g:
-    yield eval(l)
-```
+- Identifiers: `id`, `app_name`
+- Content Features: `tags`, `genres`, `specs`, `developer`
+- Quality/Popularity: `sentiment`, `reviews_url`
+- Filtering Features: `price`, `discount_price`, `release_date`, `early_access`
 
 ```json
+// Example
 {
   'publisher':'Kotoshiro',
   'genres':[ 'Action', 'Casual', 'Indie', 'Simulation', 'Strategy'],
@@ -143,6 +126,85 @@ def parse(path):
 }
 ```
 
+Records are in (loose) json format unless specified otherwise, meaning they can be treated as python dictionary objects. A simple script to read json-formatted data is as follows:
+
+```python
+def parse(path):
+  g = gzip.open(path, 'r')
+  for l in g:
+    yield eval(l)
+```
+
+### 2.2 Fields Explained
+
+**Building Game Profiles with Content-Based Features**
+
+We will create a detailed "profile" or "feature vector" for every game using its metadata. This allows us to calculate a similarity score between any two games. For this, we will utlizing the following fields in the dataset:
+
+- `tags`: This is the most important field. It contains highly specific, user-generated descriptors like 'Open World', 'Crafting', 'Roguelike' and 'Atmospheric'. We would process this list of tags for each game using techniques like TF-IDF, to create a numerical vector that represents its unique characteristics.
+- `genres`: This provides broader categories like 'Action', 'RPG', or 'Strategy'. This is a high-level feature that helps match games in the same category.
+- `specs`: This field describes the game's features, such as 'Single-player', 'Multi-player', or 'Steam Achievements'. It adds another layer of detail for finding similar games. For example, a user who plays many 'Single-player' games can be recommended others with the same spec.
+- `developer`: The developer is a very strong signal. Players who enjoy one game from a specific developer (e.g., 'CD PROJEKT RED' or 'Supergiant Games') are highly likely to enjoy their other titles, because games coming from same developer are likely to share similar genres and specs. We can treat this as a high-weight categorical feature.
+
+**Quality Score from User Sentiment**
+
+A game can be very similar in content to another but be of much lower quality. The sentiment field is the key to solving this. It provides aggregated community review scores like 'Overwhelmingly Positive', 'Mostly Positive', or 'Mixed'.
+
+We would convert these categorical labels into a numerical score according to the design of Steam's review system[^6]. For example:
+
+| Sentiment               | Score |
+| ----------------------- | ----- |
+| Overwhelmingly Positive | 10    |
+| Very Positive           | 9     |
+| Positive                | 7     |
+| Mostly Positive         | 6     |
+| Mixed                   | 5     |
+| Mostly Negative         | 4     |
+| Negative                | 3     |
+| Very Negative           | 1     |
+| Overwhelmingly Negative | 0     |
+
+This allows the recommender to prioritize games that are not only similar in content but are also well-regarded by the community.
+
+**Generating Recommendations**
+
+When a user expresses interest in a specific game (e.g., they played it, reviewed it, or are currently viewing its page), we use that game as our seed.
+
+The system retrieves the feature vector for the seed game. It then compares this vector to all other games in the dataset and calculates a similarity score (e.g., using cosine similarity). This produces a ranked list of the most similar games based purely on content.
+
+The system then takes this list of similar games and re-ranks it by multiplying the similarity score with the game's quality score (derived from sentiment).
+
+**Filtering**
+
+Other fields in the dataset are essential for giving users control over their recommendations. For example, the recommender can include filters like 'Free to Play', 'Under $10', or '50% OFF' (by comparing `price` and `discount_price`).
+
+Also users can filter to see 'New Releases' or games from a specific era.
+
+And `early_access` is a simple boolean filter to let users decide if they want to see games that are still in development.
+
+With these filters, the system can be more efficient helping users to identify the games that interest them most.
+
+[^6]: [Steam Review System](https://steamcommunity.com/discussions/forum/0/1744482869761322402/#c1744482869761428892)
+
+### 2.3 Limitations
+
+<!-- While the UCSD Steam dataset is fantastic for research and prototyping, using it to model a real-world system reveals several constraints. -->
+
+**Incompleteness**
+
+The dataset is a snapshot, not the whole picture. It dosen't include fine-grained user interaction data, whcih is the most crucial data for a production-level recommender system. Like for example, the dataset is item-centric. There are no user profiles, individual user ratings or explicit links between users and the games they've interacted with. This makes it impossible to build a true collaborative filtering model, which is the cornerstone of most modern recommenders. We have to rely on fields like the aggregated sentiment, or maybe external datasets that include UGC data.
+
+<!-- **Unrealisticity** -->
+
+**Overfitting**
+
+This dataset was originally structured for a well-defined academic task: given a game's metadata, find or predict things about it. This encourages models that are optimized for a static "item-to-item" similarity task but may not be suitable for a dynamic production environment.
+
+Because the dataset is rich in metadata and poor in user-item interactions, it heavily encourages the development of content-based filtering models. While useful, an over-reliance on this approach can lead to "filter bubbles"[^7] where users are only ever shown things that are very similar to what they already know.
+
+Also,the static nature means the model doesn't have to deal with critical production challenges like the cold-start problem, evolving user tastes over time, or temporal changes in gaming trends.
+
+[^7]: [How algorithms and filter bubbles decide what we see on social media](https://www.bbc.co.uk/bitesize/articles/zd9tt39)
 
 
 ## 3 Methods
