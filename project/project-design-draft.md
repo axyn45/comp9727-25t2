@@ -26,17 +26,38 @@ This system targets the players on game distribution platforms. Essentially we c
 
 ### 1.3 Delivery of Recommendation
 
-Ideally we're going to build a Web UI that allows gamers to interact with the system[^1]. Gamers will be presented with 10-20 games as tiles on the webpage, each with basic information displayed like game title, category/tags and overall rating (if applicable). By clicking on the tile, user can see the full description and some reviews (if applicable) of the game.
+When a user requests recommendations, the system will generate several candidate sets:
 
-[^1]: This is not guranteed and maybe replaced by a text-based simulated solution.
+- Collaborative Candidates: Based on the user's embedding, find games whose embeddings are most similar. This provides personalized, "serendipitous" recommendations.
+- Content-Based Candidates: Based on a user's recently played or viewed game, find games with similar metadata. This provides transparent, "similar to X" recommendations.
+
+Then the candidate sets are then combined into a single list. A machine learning model (like a simple logistic regression or a more complex model like Gradient Boosted Trees) can be used to rank this list. Features for this ranking model would include:
+
+- The collaborative filtering score
+- The content-based similarity score
+- The game's global popularity (from playtime data)
+- The game's community sentiment (from reviews)
+- The game's novelty or release date
+
+We're planning to build a Web UI that allows gamers to interact with the system[^1] and access the recommendations. Gamers will be presented with 10-20 games as tiles on the webpage (refresh the page to get more recommendations), each with basic information displayed like game title, category/tags and overall rating (displayed as scores, more on that later). By clicking on the tile, user can see the full description and reviews (if applicable) of the game.
+
+[^1]: This is not guranteed and may be replaced by a simulated solution.
 
 ### 1.4 Simulating User Inputs
 
-With the web-based interface mentioned before, we can capture behavioral traits from the user to refine our recommendation.
+There are two major types of user interaction we are considering to use for training:
 
-While browsing games, a user may be given the basic information, such as the name, developer, price and category of a title. If a user would like to know more on a specific game, they may click the title and jump to the profile page of the game. The clicking action indicates that the user showed interest in this game, meaning it would be sensible to make more precise and personalized reommendation based on the current game title. This action will be logged and sent back to the backend to update/improve the model.
+**Explicit Interaction**
 
-Besides browsing and clicking, a user may also add games into wishlist if the title is appealing. This will give the wishlisted games a high weight for future recommendation, meaning games similar to the ones in the wishlist have a higher chance to be faved by the player.
+1. Ratings/Reviews: The star ratings or thumbs up/down are the strongest explicit signals. This data (from the mock australian_user_reviews.json) directly informs the user's profile and can be used to fine-tune the recommendation models.
+
+2. Wishlist: Adding a game to a wishlist is a powerful signal of future purchase intent. It can be used to tune recommendations towards items the user is already considering.
+
+**Implicit Feedback**
+
+1. Playtime: This is the most important implicit signal. High playtime on a game strongly reinforces a user's preference for its genre, tags, and general characteristics. The system should weigh playtime heavily when updating user profiles.
+
+2. Clicks and Views: Clicking on a recommended game and spending time on its page is a positive signal. Ignoring a recommendation is a weak negative signal. This data is used to re-rank recommendations in near real-time.
 
 ### 1.5 Updating Model
 
@@ -91,15 +112,15 @@ Also, a good recommender system makes the platform "stickier". When players feel
 - [ ] unrealistic data
 - [x] overfit issue
 
-### 2.1 Steam Video Game and Bundle Data
+### 2.1 Game Metadata and User Generated Content
 
-[Recommender Systems and Personalization Datasets](https://cseweb.ucsd.edu/~jmcauley/datasets.html) contains a collection of datasets that have been collected for research by Julian McAuley, UCSD. We will use the collection of [Steam Video Game and Bundle Data](https://cseweb.ucsd.edu/~jmcauley/datasets.html#steam_data) (especially the item metadata) as our primary datasets.
+[Recommender Systems and Personalization Datasets](https://cseweb.ucsd.edu/~jmcauley/datasets.html) contains a collection of datasets that have been collected for research purposes by Julian McAuley, UCSD. We will use the collection of [Steam Video Game and Bundle Data](https://cseweb.ucsd.edu/~jmcauley/datasets.html#steam_data) as our primary datasets. These datasets contain reviews from the Steam video game platform, and information about which games were bundled together.
 
-These datasets contain reviews from the Steam video game platform, and information about which games were bundled together.
+In terms of this implementation, since we focus on building a hybrid system featuring content-based method along with collaborative filter, we will use item metadata as our primary training data source.
 
-In terms of this implementation, since we focus on building a content-based recommendation system, we will use item metadata as our primary training data source.
+**Item Metadata**
 
-Item metadata contains 32135 entries of different games on Steam. Each record consists of these key data fields:
+Item metadata contains 32,135 entries of different games on Steam. Each record consists of these key data fields:
 
 - Identifiers: `id`, `app_name`
 - Content Features: `tags`, `genres`, `specs`, `developer`
@@ -126,14 +147,76 @@ Item metadata contains 32135 entries of different games on Steam. Each record co
 }
 ```
 
-Records are in (loose) json format unless specified otherwise, meaning they can be treated as python dictionary objects. A simple script to read json-formatted data is as follows:
+**User Reviews**
 
-```python
-def parse(path):
-  g = gzip.open(path, 'r')
-  for l in g:
-    yield eval(l)
+User reviews (australian_user_reviews.json) contains 25,799 different reviews from australian users on Steam. Each record consists of these key data fields:
+
+- Identifiers: `user_id`, `reviews>item_id`
+- Sentiments: `recommend` (a boolean value indicating whether user would recommend this game to others), `helpful` (showing how many other users think this review is helpful/makes sense), `review` (the actual review texts)
+
+```json
+// Example
+{
+  'user_id':'ApxLGhost',
+  'user_url':'http://steamcommunity.com/id/ApxLGhost',
+  'reviews':[
+    {
+      'funny':'',
+      'posted':'Posted December 14,
+      2015.', 'last_edited':'',
+      'item_id':'730',
+      'helpful':'No ratings yet',
+      'recommend':True,
+      'review':'AMAZING GAME 10/10'
+    }
+  ]
+}
 ```
+
+**User-Item Data**
+
+User-item data (australian_users_items.json) contains 88,310 records of user-item records from australian users on Steam. Each record shows the game library a user owns and how many hours one spent on each of the game in the library. Thry consist of these key data fields:
+
+- Identifiers: `user_id`, `item_id`
+- Content: `items` (an array listing all the games in the player's library)
+- Implicit Rating: `playtime_forever` (indicating how much time a player spent on this game)
+
+```json
+// Example
+{
+  'user_id':'76561198089077856',
+  'items_count':4,
+  'steam_id':'76561198089077856',
+  'user_url':'http://steamcommunity.com/profiles/76561198089077856',
+  'items':[
+    {
+      'item_id':'205790',
+      'item_name':'Dota 2 Test',
+      'playtime_forever':0,
+      'playtime_2weeks':0
+    },
+    {
+      'item_id':'407250',
+      'item_name':'Pro Evolution Soccer 2016 myClub',
+      'playtime_forever':33,
+      'playtime_2weeks':0
+    },
+    {
+      'item_id':'466910',
+      'item_name':'Worm.is: The Game',
+      'playtime_forever':35,
+      'playtime_2weeks':0
+    },
+    {
+      'item_id':'485220',
+      'item_name':'The Orb Chambers',
+      'playtime_forever':1,
+      'playtime_2weeks':0
+    }
+  ]
+}
+````
+
 
 ### 2.2 Fields Explained
 
@@ -231,3 +314,47 @@ Also,the static nature means the model doesn't have to deal with critical produc
   - [ ] real users
   - [ ] simulated UI
   - [ ] feedback (e.g. questionaire)
+
+
+Simulating User Interactions for Evaluation
+Since you are not building the UI, you need to simulate it to evaluate your model.
+
+The User Study Plan:
+
+Goal: To determine if your hybrid recommender helps users discover games they are genuinely interested in, compared to a baseline (e.g., a simple "most popular" list).
+
+Setup:
+
+Create a simple command-line or web interface.
+
+Select a pool of test users. For each user, use their existing data from australian_users_items.json to generate a set of personalized recommendations using your model.
+
+As a baseline, also generate a list of the globally most popular games (top overall playtime).
+
+User Tasks:
+
+Present a user with a list of 10-15 recommendations from your model.
+
+Task 1 (Relevance): Ask them to go through the list and mark each game with "Interested," "Not Interested," or "Already Played."
+
+Task 2 (Discovery): Ask them to identify if there are any games on the list that they have never heard of but are now interested in trying.
+
+Task 3 (Comparison): Show them the baseline "most popular" list and ask them to perform the same tasks.
+
+Collecting Feedback:
+
+Quantitative Metrics:
+
+Precision@K: Of the top K recommendations, what percentage was the user interested in?
+
+Novelty/Serendipity: How many "new and interesting" games did your model find for them compared to the baseline?
+
+Qualitative Feedback (Post-Study Survey):
+
+"On a scale of 1-5, how relevant were the recommendations?"
+
+"Did you feel the recommendations were personalized to your tastes?"
+
+"Did the system help you discover new games you wouldn't have found otherwise?"
+
+"Which list (yours or the baseline) did you find more useful, and why?"
