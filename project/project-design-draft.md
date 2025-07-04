@@ -222,7 +222,7 @@ User-item data (australian_users_items.json) contains 88,310 records of user-ite
 
 **Building Game Profiles with Content-Based Features**
 
-We will create a detailed "profile" or "feature vector" for every game using its metadata. This allows us to calculate a similarity score between any two games. For this, we will utlizing the following fields in the dataset:
+We will create a detailed "profile" or "feature vector" for every game using its metadata. This allows us to calculate a similarity score between any two games. For this, we will utlizing the following fields in the item metadata:
 
 - `tags`: This is the most important field. It contains highly specific, user-generated descriptors like 'Open World', 'Crafting', 'Roguelike' and 'Atmospheric'. We would process this list of tags for each game using techniques like TF-IDF, to create a numerical vector that represents its unique characteristics.
 - `genres`: This provides broader categories like 'Action', 'RPG', or 'Strategy'. This is a high-level feature that helps match games in the same category.
@@ -249,6 +249,34 @@ We would convert these categorical labels into a numerical score according to th
 
 This allows the recommender to prioritize games that are not only similar in content but are also well-regarded by the community.
 
+**Collaborative Filtering with Behavioral Data**
+
+User-item data provides implicit user behavior data.
+
+`user_id` and `item_id` are used to construct a massive user-item interaction matrix. This matrix is the fundamental data structure for collaborative filtering. The rows represent users, the columns represent games, and the values inside the matrix represent the strength of the interaction.
+
+`playtime_forever` is the most valuable field in this dataset and will be the core value in a user-item matrix. It's a powerful implicit signal of engagement and preference. Raw playtime is heavily skewed. For example, some users play for thousands of hours, many play for less than one. To make it useful, we must transform it, typically using a logarithmic function like log(1 + playtime). This compresses the range and turns it into a more stable numerical score representing user preference. This transformed playtime score is the primary input for training a matrix factorization model (e.g., Alternating Least Squares - ALS). The model will learn to predict these playtime scores for games a user hasn't played yet, and the highest predictions become the recommendations.
+
+The mere fact that a game is in a user's items list signifies a strong positive signal (that is the user have purchased it). A binary "owns/doesn't own" matrix can be used to build a simpler collaborative filtering model. The `items_count` can be helpful in identifying highly engaged users.
+
+**Explicit User-Generated Content (UGC)**
+
+User reviews provides explicit user feedback.
+
+`recommend` is a powerful, high-quality, explicit signal. It's binary so we can easily tell if the user like it or not. A `True` value for `recommend` on a game strongly boosts that game's genres and tags within the user's preference profile. A `False` can be used to down-weight or create a negative profile of tags/genres the user dislikes. This boolean can be used as a "like" or "dislike" in various recommendation algorithms, providing clear guidance that complements the implicit playtime data. For instance, a game with high playtime but a False recommendation might be a guilty pleasure or a game the user now dislikes, a nuance that playtime alone cannot capture.
+
+`review` (Text) is the most unstructured but potentially richest data source. Instead of just a binary recommend flag, we can apply NLP models to the review text to get a more detailed sentiment score (e.g., a score from -1.0 to 1.0). This can capture mixed feelings that the boolean misses. NLP helps to extract key topics or aspects from reviews. This allows us to build an incredibly detailed user profile. For example, a user who consistently mentions "great story" in their positive reviews can be recommended other story-rich games, even across different genres.
+
+**Filtering**
+
+Other fields in the dataset are essential for giving users control over their recommendations. For example, the recommender can include filters like "Free to Play", "Under $10", or "50% OFF" (by comparing `price` and `discount_price`).
+
+Also users can filter to see "New Releases" or games from a specific era.
+
+And `early_access` is a simple boolean filter to let users decide if they want to see games that are still in development.
+
+With these filters, the system can be more efficient helping users to identify the games that interest them most.
+
 **Generating Recommendations**
 
 When a user expresses interest in a specific game (e.g., they played it, reviewed it, or are currently viewing its page), we use that game as our seed.
@@ -257,15 +285,6 @@ The system retrieves the feature vector for the seed game. It then compares this
 
 The system then takes this list of similar games and re-ranks it by multiplying the similarity score with the game's quality score (derived from sentiment).
 
-**Filtering**
-
-Other fields in the dataset are essential for giving users control over their recommendations. For example, the recommender can include filters like 'Free to Play', 'Under $10', or '50% OFF' (by comparing `price` and `discount_price`).
-
-Also users can filter to see 'New Releases' or games from a specific era.
-
-And `early_access` is a simple boolean filter to let users decide if they want to see games that are still in development.
-
-With these filters, the system can be more efficient helping users to identify the games that interest them most.
 
 [^6]: [Steam Review System](https://steamcommunity.com/discussions/forum/0/1744482869761322402/#c1744482869761428892)
 
@@ -275,7 +294,11 @@ With these filters, the system can be more efficient helping users to identify t
 
 **Incompleteness**
 
-The dataset is a snapshot, not the whole picture. It dosen't include fine-grained user interaction data, whcih is the most crucial data for a production-level recommender system. Like for example, the dataset is item-centric. There are no user profiles, individual user ratings or explicit links between users and the games they've interacted with. This makes it impossible to build a true collaborative filtering model, which is the cornerstone of most modern recommenders. We have to rely on fields like the aggregated sentiment, or maybe external datasets that include UGC data.
+Each of these datasets is a snapshot, not the whole picture. It captures interactions up to a certain date and then stops, missing the continuous, dynamic flow of a live platform.
+
+The datasets contains no information about games released after it was created. Your model will be completely blind to new hits, or major updates to existing games. Also,player preferences are not static. A genre that was niche when the data was collected could explode in popularity later (e.g., the rise of Auto-battlers or Extraction Shooters). The model cannot adapt to these evolving market trends.
+
+A real-world platform like Steam should track a much wider array of user interactions than just playtime and reviews. This dataset is missing crucial signals that provide context and measure intent. Like for example, it lacks data on wishlist additions, which is a powerful signal of what a user wants to buy in the future. It doesn't capture clicks, page view duration, or trailer views. This short-term data is vital for session-based recommendations[^7].
 
 <!-- **Unrealisticity** -->
 
@@ -283,11 +306,11 @@ The dataset is a snapshot, not the whole picture. It dosen't include fine-graine
 
 This dataset was originally structured for a well-defined academic task: given a game's metadata, find or predict things about it. This encourages models that are optimized for a static "item-to-item" similarity task but may not be suitable for a dynamic production environment.
 
-Because the dataset is rich in metadata and poor in user-item interactions, it heavily encourages the development of content-based filtering models. While useful, an over-reliance on this approach can lead to "filter bubbles"[^7] where users are only ever shown things that are very similar to what they already know.
+Because the datasets are (overall) rich in metadata and poor in user-item interactions, it heavily encourages the development of content-based filtering models. While useful, an over-reliance on this approach can lead to filter bubbles[^8] where users are only ever shown things that are very similar to what they already know.
 
-Also,the static nature means the model doesn't have to deal with critical production challenges like the cold-start problem, evolving user tastes over time, or temporal changes in gaming trends.
+[^7]: [Session-based Recommender Systems](https://session-based-recommenders.fastforwardlabs.com/)
 
-[^7]: [How algorithms and filter bubbles decide what we see on social media](https://www.bbc.co.uk/bitesize/articles/zd9tt39)
+[^8]: [How algorithms and filter bubbles decide what we see on social media](https://www.bbc.co.uk/bitesize/articles/zd9tt39)
 
 
 ## 3 Methods
@@ -298,6 +321,45 @@ Also,the static nature means the model doesn't have to deal with critical produc
     - [ ] different methods or combined
 - [ ] justify their suitability
   - [ ] evaluate methods and system
+
+### 3.1 Type Variance and Justification
+
+Given the goal of building a scalable, user-centric system, a multi-faceted approach is ideal. Here we are exploring different types of system including content-based, collaborative filtering, hybrid and knowledge-based recommender systems.
+
+**Content-Based Filtering**
+
+We propose to combine TF-IDF (Term Frequency-Inverse Document Frequency) with cosine similarity to create a profile for each game by analyzing its descriptive text. It treats the combined information from the tags, genres, and developer fields as a document. TF-IDF converts this text into a numerical vector, giving more weight to tags that are specific and descriptive. Cosine similarity is then used to calculate the "angle" between these vectors, providing a score of how similar two games are in content.
+
+It's computationally efficient, easy to interpret and doesn't require any user data, making it a perfect starting point.
+
+**Collaborative Filtering**
+
+This is the core of personalization, leveraging the interaction data from user-item and user reviews datasets to model user taste.
+
+Matrix factorization (specifically, Alternating Least Squares - ALS[^9]) is a technique that decomposes the massive user-item interaction matrix into two smaller, denser matrices: a "user-factor" matrix and an "item-factor" matrix. These factors are latent (hidden) features, like "affinity for open-world games" or "preference for high-difficulty." The model learns these factors by trying to reconstruct the original interaction data. ALS is the industry standard[^10] for this task because it's highly scalable (designed for distributed systems like Spark) and specifically tailored for implicit feedback. We can feed it the log-transformed `playtime_forever` as the confidence score of a user's preference, which is a perfect fit for the data. This method uncovers unexpected recommendations that a user might not have found otherwise.
+
+**Hybrid Mode**
+
+Instead of using these methods in isolation, we are now combining them into a single, powerful system.
+
+Proposed Method: A Two-Stage Hybrid Model (Retrieval and Ranking)
+
+Stage 1: Candidate Generation (Retrieval): In this stage, you use the faster, broader models (ALS Collaborative Filtering and Content-Based Similarity) to generate a large pool of several hundred potentially relevant candidates for a user.
+
+Stage 2: Fine-Grained Ranking: This is where the magic happens. You use a more complex machine learning model, like Gradient Boosted Trees (e.g., XGBoost, LightGBM), to rank this smaller set of candidates. This ranking model takes the outputs of all your other methods as its input features.
+
+Example features for the ranking model would include:
+
+The predicted score from the ALS model.
+The content similarity score from TF-IDF.
+The game's numerical sentiment score.
+The game's price.
+Boolean flags like is_early_access.
+The game's age (derived from release_date).
+
+[^9]: [A gentle introduction to Alternating Least Squares](https://sophwats.github.io/2018-04-05-gentle-als.html)
+
+[^10]: [Tutorial: Create, evaluate, and score a recommendation system](https://learn.microsoft.com/en-us/fabric/data-science/retail-recommend-model)
 
 ## 4 Evaluation
 
@@ -315,6 +377,7 @@ Also,the static nature means the model doesn't have to deal with critical produc
   - [ ] simulated UI
   - [ ] feedback (e.g. questionaire)
 
+// TODO: Require revision
 
 Simulating User Interactions for Evaluation
 Since you are not building the UI, you need to simulate it to evaluate your model.
