@@ -1,5 +1,8 @@
 # Project: Gamer's Partner
 
+> Author: ---
+> zID: ---
+
 In an era of abundant digital entertainment, players often face the paradox of choice, struggling to find new games that align with their unique tastes. The sheer volume of available titles on platforms like Steam, Epic Games Store, and console marketplaces makes manual discovery a significant challenge. This document details the design of a sophisticated recommender system aimed at solving this problem. By intelligently analyzing player behavior, preferences, and the inherent attributes of games, our system will provide tailored recommendations that connect players with their next favorite game. The core objectives are to increase player satisfaction, drive engagement, and create a more personalized and compelling user experience.
 
 ## 1 Scope
@@ -235,6 +238,8 @@ A game can be very similar in content to another but be of much lower quality. T
 
 We would convert these categorical labels into a numerical score according to the design of Steam's review system[^6]. For example:
 
+<center>
+
 | Sentiment               | Score |
 | ----------------------- | ----- |
 | Overwhelmingly Positive | 10    |
@@ -246,6 +251,8 @@ We would convert these categorical labels into a numerical score according to th
 | Negative                | 3     |
 | Very Negative           | 1     |
 | Overwhelmingly Negative | 0     |
+
+</center>
 
 This allows the recommender to prioritize games that are not only similar in content but are also well-regarded by the community.
 
@@ -340,26 +347,48 @@ Matrix factorization (specifically, Alternating Least Squares - ALS[^9]) is a te
 
 **Hybrid Mode**
 
-Instead of using these methods in isolation, we are now combining them into a single, powerful system.
+Instead of using these methods in isolation, we can combine them into a single, powerful system. Here is a proposed method that's taking advantage of a hybrid model:
 
-Proposed Method: A Two-Stage Hybrid Model (Retrieval and Ranking)
+- **Candidate Generation**: In this stage, we use the faster, broader models (ALS collaborative filtering and content-based similarity) to generate a large pool of several hundred potentially relevant candidates for a user. For a given `user_id`, this model can rapidly find the top games that the user is most likely to enjoy based on the latent factors learned from the community's playtime data. As a consequence, we will get an output consisting of a list of personalized game IDs. The system then looks at the last few games the user has played or positively reviewed. For each of these seed games, it uses the pre-calculated TF-IDF vectors to find the most similar games based on tags and genres.
 
-Stage 1: Candidate Generation (Retrieval): In this stage, you use the faster, broader models (ALS Collaborative Filtering and Content-Based Similarity) to generate a large pool of several hundred potentially relevant candidates for a user.
+- **Fine-Grained Ranking**: Now use a more complex machine learning model, like gradient boosted trees (e.g., XGBoost, LightGBM), to rank this smaller set of candidates. This ranking model takes the outputs of all the other methods as its input features. Gradient boosted trees are excellent at handling a mix of numerical and categorical features and are renowned for their high performance in ranking tasks[^11]. For each of the ~300 candidate games, the system creates a rich feature vector. The ranking model then takes this feature vector and outputs a single score representing the probability that the user will interact with that specific item.
 
-Stage 2: Fine-Grained Ranking: This is where the magic happens. You use a more complex machine learning model, like Gradient Boosted Trees (e.g., XGBoost, LightGBM), to rank this smaller set of candidates. This ranking model takes the outputs of all your other methods as its input features.
+Finally, the system sorts the candidates by this new score in descending order, and the top 10~20 are displayed to the user.
 
-Example features for the ranking model would include:
+### 3.2 Justification
 
-The predicted score from the ALS model.
-The content similarity score from TF-IDF.
-The game's numerical sentiment score.
-The game's price.
-Boolean flags like is_early_access.
-The game's age (derived from release_date).
+**Pure Content-Based System**
+
+A content-based system is good at **solving cold start problem**. A brand new game can be recommended the moment it's added to the catalog, as long as it has metadata. The system doesn't need to wait for users to play or review it.
+
+It doesn't require any data from other users to make a recommendation for a specific user. This makes the underlying **calculations simpler** and avoids some **privacy considerations**.
+
+However, if a user only plays say open-world RPGs, this system will only ever recommend other open-world RPGs. It will never make the leap to suggest a highly-rated deck-builder game that the user might unexpectedly love, **limiting the scope of recommendation**.
+
+**Pure Collaborative Filtering System**
+
+By analyzing patterns across thousands of users, it can discover that players who enjoy complex strategy games also tend to enjoy intricate puzzle games, even if the genres seem unrelated. This leads to **novel and delightful discoveries**.
+
+Beside, the model learns directly from user behavior, which is often a **more reliable** indicator of preference than curated metadata.
+
+On the other hand, it's useless for new items that have no interaction data and cannot generate personalized recommendations for new users who have no playtime history. And these models have a natural tendency to recommend items that are already popular, creating a **feedback loop** that makes popular items even more popular.
+
+**Hybrid System**
+
+Relying on a single recommendation method creates vulnerabilities. For example, a purely collaborative filtering system might fail for new users and new games (cold start) and can struggle to recommend items outside a user's established preferences. In contrary, a solely content-based system can trap users in a filter bubble, only recommending items that are almost identical to what they've already played and missing novel discoveries. A hybrid system's principle is to combine the signals from all models to create a final recommendation that is greater than the sum of its parts.
+
+The main drawback is that the system is more **complex to design**, build, and maintain. However, this is a necessary trade-off for the significant gains in performance and user experience.
+
+
+
+
 
 [^9]: [A gentle introduction to Alternating Least Squares](https://sophwats.github.io/2018-04-05-gentle-als.html)
 
 [^10]: [Tutorial: Create, evaluate, and score a recommendation system](https://learn.microsoft.com/en-us/fabric/data-science/retail-recommend-model)
+
+[^11]: [Gradient Boosted Decision Trees](https://developers.google.com/machine-learning/decision-forests/intro-to-gbdt)
+
 
 ## 4 Evaluation
 
@@ -377,47 +406,86 @@ The game's age (derived from release_date).
   - [ ] simulated UI
   - [ ] feedback (e.g. questionaire)
 
-// TODO: Require revision
+### 4.1 Evaluating the Recommendation Model
 
-Simulating User Interactions for Evaluation
-Since you are not building the UI, you need to simulate it to evaluate your model.
+The standard approach is to create a training/test split. For each user, we hide their most recent interactions and train the model on their remaining history. The goal is to see how well the model can predict these hidden items.
 
-The User Study Plan:
+The following metrics evaluate how good the model is at placing relevant items at the top of the recommendation list.
 
-Goal: To determine if your hybrid recommender helps users discover games they are genuinely interested in, compared to a baseline (e.g., a simple "most popular" list).
+**Precision@N**
 
-Setup:
+This measures the percentage a user actually play/positively review in the test set among the top K games recommended. With precision@N, we can determine how many of the recommendations were actually relevant.
 
-Create a simple command-line or web interface.
+**Recall@N**
 
-Select a pool of test users. For each user, use their existing data from australian_users_items.json to generate a set of personalized recommendations using your model.
+This measures the proportion of successfully recommend in the top N list? This reflects to how many did we find of all the games the user liked.
 
-As a baseline, also generate a list of the globally most popular games (top overall playtime).
+Use Case: These are great for evaluating carousels with a fixed number of slots, like a "Top 10 Picks for You."
 
-User Tasks:
+**Mean Average Precision (MAP@N)**
 
-Present a user with a list of 10-15 recommendations from your model.
+Mean average precision is a more robust metric than precision@N because it heavily rewards a model for placing relevant items at the very top of the list. A correct recommendation at rank #1 is scored much higher than one at rank #10.
 
-Task 1 (Relevance): Ask them to go through the list and mark each game with "Interested," "Not Interested," or "Already Played."
+It's Ideal for measuring the performance of primary, ordered recommendation lists where the top few results are most critical.
 
-Task 2 (Discovery): Ask them to identify if there are any games on the list that they have never heard of but are now interested in trying.
+**Normalized Discounted Cumulative Gain (NDCG@N)**
 
-Task 3 (Comparison): Show them the baseline "most popular" list and ask them to perform the same tasks.
+NDCG compares rankings to an ideal order where all relevant items are at the top of the list. NDCG@N is determined by dividing the discounted cumulative gain (DCG) by the ideal DCG representing a perfect ranking [^12]. Its key advantage is that it can handle graded relevance scores. Instead of a simple relevant/not relevant flag, we can use the log-transformed playtime_forever as the relevance score.
 
-Collecting Feedback:
+NDCG would correctly identify that recommending a game a user played for 200 hours is far better than recommending one they played for 20 minutes. It rewards the model for predicting not just what users will like, but how much they will like it.
 
-Quantitative Metrics:
+### 4.2 Beyond Accuracy
 
-Precision@K: Of the top K recommendations, what percentage was the user interested in?
+A system that is accurate but only recommends obvious bestsellers is not a good system. The following metrics also evaluate the quality of the recommendations themselves.
 
-Novelty/Serendipity: How many "new and interesting" games did your model find for them compared to the baseline?
+**Coverage**
 
-Qualitative Feedback (Post-Study Survey):
+Coverage is calculated as the percentage of the total items in the catalog that the model recommend over a large sample of users. It helps diagnose if our model is suffering from popularity bias. Low coverage means it's consistently failing to recommend items from the set.
 
-"On a scale of 1-5, how relevant were the recommendations?"
+**Diversity**
 
-"Did you feel the recommendations were personalized to your tastes?"
+Diversity measures how different the recommended items are from each other. This can be done by calculating the average content distance (using the TF-IDF vectors) between items in a recommendation list. A high average distance means high diversity. This ensures we are not creating a filter bubble. It's the key metric for evaluating whether the system is helping users discover new interests.
 
-"Did the system help you discover new games you wouldn't have found otherwise?"
+### 4.3 Best Practice with NDCG@N
 
-"Which list (yours or the baseline) did you find more useful, and why?"
+For this specific recommendation problem, we've decided the single most important offline metric is NDCG@K.
+
+The superiority of NDCG for this project comes down to that it embraces graded relevance. The datasets contain more feedback data than only a binary like/dislike feature (like playtime). NDCG allows us to use value like `log(playtime_forever)` as the relevance score. This means correctly recommending the 500-hour game contributes significantly more to the overall performance score than recommending the 2-hour game. This makes NDCG a much more sensitive and realistic measure of a model's ability to predict true user satisfaction.
+
+**Models Evaluation**
+
+First we should determine a fixed `N` for NDCG@N as the main target. This should maximize the score on our test set. Then train all candidate models on the training data. Evaluate each one on the test set, calculating NDCG@N, coverage, and diversity for each.
+
+Discard any models that fall below our minimum threshold for coverage. A model that isn't capable of recommending from the long-tail is a non-starter, regardless of its accuracy.
+
+From the remaining pool of models, we will select the one with the highest NDCG@N score. This is the one that is best at ranking highly relevant items at the top of the list.
+
+### 4.4 Computational Resource Consideration
+
+The offline stage (including Training the collaborative filtering and content-based model) is characterized by high-throughput, batch workloads. It demands a powerful, scalable data processing cluster (e.g., Spark on AWS EMR or Google Dataproc) but has relaxed latency requirements. This is the periodic, batch-processing workload where the models are trained on the full datasets. This phase is computationally expensive, but it does not need to be real-time. It can be run daily or weekly on a schedule.
+
+The online stage (including candidate generation and ranking) is characterized by low-latency, high-concurrency requests. It relies heavily on pre-computation from the offline stage and uses specialized, in-memory databases and optimized serving infrastructure to deliver recommendations in near-real time. This is the workload that happens a user visits the service and needs recommendations instantly. The primary requirement here is extremely low latency (typically under 200 milliseconds for the entire process).
+
+### 4.5 User Study
+
+To determine if our system helps users discover games they are genuinely interested in, we have to create a mock-up interface to get the real-world feedback
+
+Imagine we have a pool of test users. For each user, use their existing data from user-ietm dataset to generate a set of personalized recommendations using our model. As a baseline, also generate a list of the globally most popular games.
+
+`Questionnaire`
+
+Now present a user with a list of 10-20 recommendations from our model.
+
+- Task 1 (Relevance): Ask them to go through the list and mark each game with "Interested," "Not Interested," or "Already Played."
+- Task 2 (Discovery): Ask them to identify if there are any games on the list that they have never heard of but are now interested in trying.
+- Task 3 (Comparison): Show them the baseline "most popular" list and ask them to perform the same tasks.
+
+**Collecting Feedback**
+
+For collecting quantitative feedback on the survey ratings:
+
+- Perceived Relevance: (1-5 scale) "The recommendations were relevant to my tastes."
+- Perceived Novelty: (1-5 scale) "I discovered new and interesting games."
+- Overall Satisfaction: (1-5 scale) "Overall, I was satisfied with these recommendations."
+
+[^12]: [Normalized Discounted Cumulative Gain (NDCG) explained](https://www.evidentlyai.com/ranking-metrics/ndcg-metric)
