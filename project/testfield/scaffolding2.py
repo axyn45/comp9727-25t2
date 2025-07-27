@@ -5,7 +5,11 @@ import pandas as pd
 import praw
 import re
 from tqdm.notebook import tqdm
+import string
 
+s = "some\x00string. with\x15 funny characters"
+printable = set(string.printable)
+print(''.join(filter(lambda x: x in printable, s)))
 
 def download_dataset()->list[str]:
     """
@@ -144,7 +148,7 @@ def download_posts(
             "index": index,
             "submission_id": submission_id,
             "title": title,
-            "selftext": selftext.replace('\n','\\n').replace('\t','\\t'),
+            "selftext": selftext.replace('\n',' ').replace('\t',' '),
             "num_comments": num_comments,
             "num_unique_commentators": num_unique_commentators,
             "ups": ups,
@@ -155,7 +159,8 @@ def download_posts(
         }
     
     def entry_to_text(entry):
-        return str(entry["index"])+'\t'+str(entry["submission_id"])+'\t'+str(entry["title"])+'\t'+str(entry["selftext"])+'\t'+str(entry["num_comments"])+'\t'+str(entry["num_unique_commentators"])+'\t'+str(entry["ups"])+'\t'+str(entry["upvote_ratio"])+'\t'+str(entry["author"])+'\t'+str(entry["created_utc"])+'\t'+str(entry["text_only"])
+        utf_8_string= str(entry["index"])+'\t'+str(entry["submission_id"])+'\t'+str(entry["title"])+'\t'+str(entry["selftext"])+'\t'+str(entry["num_comments"])+'\t'+str(entry["num_unique_commentators"])+'\t'+str(entry["ups"])+'\t'+str(entry["upvote_ratio"])+'\t'+str(entry["author"])+'\t'+str(entry["created_utc"])+'\t'+str(entry["text_only"])
+        return ''.join(filter(lambda x: x in printable, utf_8_string))
 
     # Define the schema we expect
     expected_cols = list(make_post_entry())
@@ -204,6 +209,7 @@ def download_posts(
                     text_only = (not post.is_video) and (post.media is None),
                 )
                 f_reddit.write(entry_to_text(entry)+'\n')
+                
                 # buffer.append(entry)
 
             # df = pd.DataFrame(buffer, columns=expected_cols)
