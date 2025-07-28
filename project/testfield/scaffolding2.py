@@ -186,9 +186,13 @@ def download_posts(
     chunk_size=100
     chunks = math.ceil(submissions.shape[0] / chunk_size)
     counter = 0
-    f_reddit = open("reddit_data.tsv","w", encoding="utf-8")
+    f_reddit = open("reddit_data_askreddit.tsv","w", encoding="utf-8")
 
-    for i in tqdm(range(chunks), "working hard at scraping", chunks):
+    print("total: "+str(chunks))
+    # for i in tqdm(range(chunks), "working hard at scraping", chunks):
+    for i in range(chunks):
+        if i%50==0:
+            print("current: "+str(i))
         start = i*chunk_size
         end = (i+1)*chunk_size
         slc = slice(start, end)
@@ -227,8 +231,13 @@ reddit = praw.Reddit(
 )
 
 votes, submissions = get_dataframe()
-showerthoughts = submissions[submissions['SUBREDDIT'].isin(['Showerthoughts'])].reset_index(drop=True)
+# showerthoughts = submissions[submissions['SUBREDDIT'].isin(['Showerthoughts'])].reset_index(drop=True)
+askreddit = submissions[submissions['SUBREDDIT'].isin(['politics'])].reset_index(drop=True)
 
-download_posts(showerthoughts, reddit)
 
-showerthoughts_data = pd.read_csv('reddit_data.csv')
+# download_posts(showerthoughts, reddit)
+download_posts(askreddit, reddit,savefile_path="reddit_data_askreddit.csv")
+
+
+# showerthoughts_data = pd.read_csv('reddit_data.csv')
+askreddit_data = pd.read_csv('reddit_data_askreddit.csv')
