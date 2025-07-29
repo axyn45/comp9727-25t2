@@ -159,7 +159,7 @@ def download_posts(
         }
     
     def entry_to_text(entry):
-        utf_8_string= str(entry["index"])+'\t'+str(entry["submission_id"])+'\t'+str(entry["title"])+'\t'+str(entry["selftext"])+'\t'+str(entry["num_comments"])+'\t'+str(entry["num_unique_commentators"])+'\t'+str(entry["ups"])+'\t'+str(entry["upvote_ratio"])+'\t'+str(entry["author"])+'\t'+str(entry["created_utc"])+'\t'+str(entry["text_only"])
+        utf_8_string= str(entry["index"])+'\t'+str(entry["submission_id"])+'\t'+str(entry["title"])+'\t'+str(entry["selftext"]).replace('\n','').replace('\t',' ')+'\t'+str(entry["num_comments"])+'\t'+str(entry["num_unique_commentators"])+'\t'+str(entry["ups"])+'\t'+str(entry["upvote_ratio"])+'\t'+str(entry["author"])+'\t'+str(entry["created_utc"])+'\t'+str(entry["text_only"])
         return ''.join(filter(lambda x: x in printable, utf_8_string))
 
     # Define the schema we expect
