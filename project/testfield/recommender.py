@@ -1,9 +1,6 @@
 '''
 This recommender is still in development.
-Critical issue happens when doing personalized recommendations
-because  the user history mechanisim is faulty.
 '''
-
 
 import math
 import pandas as pd
@@ -38,17 +35,22 @@ print("-" * 40)
 class Recommender:
     def __init__(self, posts_data, embeddings_data):
         self.posts_df = posts_data
+        self.embedding_ids=embeddings_data['ids']
         self.embeddings = embeddings_data['combined_embed']
         self.user_history = [] # list to store user votes as dicts
         # add a set to track all seen posts (voted or skipped)
         self.seen_ids = set()
-        self.cold_start_threshold = 10
+        self.cold_start_threshold = 5
 
+    def embedding_ids_to_indices(self,ids):
+        return [i for i,_ in enumerate(self.embeddings) if self.embedding_ids[i] in ids]
+    def embedding_indices_to_ids(self,indices):
+        return [self.embedding_ids[i] for i in indices]
+    
     def get_trending_posts(self, n=5):
         """Returns top N posts based on a simple score, excluding seen posts."""
         # rank by trend
         trending_score = (np.log(self.posts_df['ups'].fillna(0).add(1)) / np.log(50)) +self.posts_df['upvote_ratio'].fillna(0)
-        print(trending_score.head(5))
         # get all trending indices and filter out seen ones
         posts_df['trending']=trending_score
         all_trending_ids = trending_score.argsort()[::-1]
@@ -63,16 +65,19 @@ class Recommender:
         """Generates personalized recommendations based on user history."""
         history_df = pd.DataFrame(self.user_history)
         
-        upvoted_indices = history_df[history_df['vote'] == 'upvote']['embedding_idx'].tolist()
-        downvoted_indices = history_df[history_df['vote'] == 'downvote']['embedding_idx'].tolist()
+        # upvoted_indices = history_df[history_df['vote'] == 'upvote']['embedding_idx'].tolist()
+        upvoted_posts = [x for x in history_df[history_df['vote'] == 'upvote']['post_id']]
+
+        # downvoted_posts = history_df[history_df['vote'] == 'downvote']['embedding_idx'].tolist()
+        downvoted_posts = [x for x in history_df[history_df['vote'] == 'downvote']['post_id']]
 
         # handle cases where user has only upvoted or downvoted
-        if not upvoted_indices or not downvoted_indices:
+        if not upvoted_posts or not downvoted_posts:
             print("\n[INFO] Need both upvotes and downvotes for personalized predictions.")
             print("[INFO] Falling back to recommendations based on your upvotes...")
-            if not upvoted_indices: return self.get_trending_posts(n) # Fallback to trending
-            
-            profile = self.embeddings[upvoted_indices].mean(axis=0).reshape(1, -1)
+            if not upvoted_posts: return self.get_trending_posts(n) # Fallback to trending
+            # [i for i,_ in enumerate(self.embeddings) if self.embeddings_data['ids'][i] in upvoted_posts]
+            profile = self.embeddings[self.embedding_ids_to_indices(upvoted_posts)].mean(axis=0).reshape(1, -1)
             sim = cosine_similarity(profile, self.embeddings).flatten()
             
             # exclude all seen posts
@@ -81,14 +86,20 @@ class Recommender:
             rec_indices = sim.argsort()[::-1][:n]
             return self.posts_df.iloc[rec_indices]
 
-
+        upvoted_indices=self.embedding_ids_to_indices(upvoted_posts)
+        downvoted_indices=self.embedding_ids_to_indices(downvoted_posts)
         # use the vote prediction model logic
-        upvote_profile = self.embeddings[upvoted_indices].mean(axis=0).reshape(1, -1)
-        downvote_profile = self.embeddings[downvoted_indices].mean(axis=0).reshape(1, -1)
+        if len(upvoted_indices)!=0:
+            upvote_profile = self.embeddings[upvoted_indices].mean(axis=0).reshape(1, -1)
+        else: upvote_profile=[]
+        if len(downvoted_indices)!=0:
+            downvote_profile = self.embeddings[downvoted_indices].mean(axis=0).reshape(1, -1)
+        else: downvote_profile=[]
 
         # create features for all posts the user hasn't seen
-        unseen_ids = self.posts_df.index.difference(list(self.seen_ids)).tolist()
-        unseen_vectors = self.embeddings[unseen_ids]
+        unseen_ids_indices=[i for i,_ in enumerate(self.embedding_ids) if self.embedding_ids[i] not in self.seen_ids]
+
+        unseen_vectors = self.embeddings[unseen_ids_indices]
 
         sim_to_upvotes = cosine_similarity(unseen_vectors, upvote_profile).flatten()
         sim_to_downvotes = cosine_similarity(unseen_vectors, downvote_profile).flatten()
@@ -96,7 +107,7 @@ class Recommender:
         X_predict = np.vstack([sim_to_upvotes, sim_to_downvotes]).T
 
         # Ttrain a classifier on the user's history
-        X_train_indices = history_df['embedding_idx'].tolist()
+        X_train_indices = self.embedding_ids_to_indices(history_df['post_id'].tolist())
         X_train = np.vstack([
             cosine_similarity(self.embeddings[X_train_indices], upvote_profile).flatten(),
             cosine_similarity(self.embeddings[X_train_indices], downvote_profile).flatten()
@@ -110,18 +121,16 @@ class Recommender:
         upvote_probs = classifier.predict_proba(X_predict)[:, 1]
         
         # get the indices of the top N posts with highest upvote probability
-        top_n_local_indices = upvote_probs.argsort()[::-1][:n]
+        top_n_indices = upvote_probs.argsort()[::-1][:n]
         
-        # map local indices back to original dataframe indices
-        recommendation_indices = [unseen_ids[i] for i in top_n_local_indices]
-        
-        return self.posts_df.iloc[recommendation_indices]
+        return self.posts_df.iloc[top_n_indices]
+
 
     def add_vote(self, post_index, vote):
         """Adds a user's vote to their history."""
         post = self.posts_df.iloc[post_index]
         self.user_history.append({
-            'embedding_idx': post['embedding_idx'],
+            'post_id': post['submission_id'],
             'title': post['title'],
             'vote': vote
         })
