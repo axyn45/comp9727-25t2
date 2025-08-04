@@ -155,3 +155,21 @@ def plot_method_comparison(results_df):
 
 # Call the plotting function with the final DataFrame
 plot_method_comparison(final_df)
+
+
+
+# --- 9. Calculate and Display Mean NDCG Scores ---
+print("\n--- Calculating Mean NDCG@200 Scores ---")
+
+# We use the final_df which has the rounded scores
+ndcg_columns = [col for col in final_df.columns if 'NDCG@200' in col]
+mean_scores = final_df[ndcg_columns].mean()
+
+# Rename the index for better readability
+mean_scores.index = [idx.replace('NDCG@200_', '') for idx in mean_scores.index]
+
+# Sort the results for a clear ranking
+mean_scores = mean_scores.sort_values(ascending=False)
+
+print("\nAverage NDCG@200 Score per Method:")
+print(mean_scores.to_string())

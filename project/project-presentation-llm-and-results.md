@@ -32,27 +32,15 @@ These LLM-generated embeddings formed the core of one of our primary recommendat
 In our final evaluation, this LLM-based model was one of the top-performing methods, proving particularly effective for users with thematically consistent voting histories. This demonstrates the significant value of using deep semantic understanding for content-based recommendation.
 
 # 2. Results
+
 ## 2.1 Script
-(Start with the chart visible to the audience)
 
-We evaluated five different recommender models on posts from the r/Showerthoughts subreddit. We measured performance using NDCG@200, which tells us how good the top 200 recommendations are for a given user.
+Before diving into the results, it's important to justify our choice. So NDCG@200 provides a wider, more realistic window to evaluate a model's ability to rank relevant items highly, even if they don't appear in the absolute top positions. It also gives partial credit for placing a good item at rank 150 versus not finding it at all, making it a more suitable metric for this "needle in a haystack" problem.
 
-(Point to the overall chart)
+The standout of this analysis is Vector Negation. As seen in the chart, the red dotted line for VN achieves overall high scores for many users where other models struggled. The model doesn't just match personal taste; it also prioritizes content that is already validated and found engaging by the community, significantly increasing the likelihood of a successful recommendation.
 
-The first thing you'll notice from this chart is that there's no single winner. The performance of every model is extremely dependent on the individual user. For some users, we get great results, while for others, we get none at all, which probably indicates that user tastes in r/Showerthoughts are very personal and diversified thing.
+With that said, the LLM and TF-IDF models are still remarkable for users with consistent tastes, as seen with the user `daygloviking`. So when a user's upvotes are all tightly clustered around a single theme, a pure content-based approach is sufficient. However, for the more common "generalist" user, these models are hampered by their inability to leverage the powerful signal of a post's existing popularity.
 
-(Point to the peaks for daygloviking and baddonkey)
+As for the SVM and Neural Network, these models continue to be relatively niche performers, but occasionally finding success for specific users. For example `baddonky` showed outstanding performance for SVM.
 
-Let's look at where the models did well. For the user daygloviking, the LLM and TF-IDF models were outstanding. For baddonkey, the SVM model was the clear winner. This strongly suggests that these users have very consistent tastes. When a user’s upvotes have a clear theme, our models can build an accurate profile and find similar content.
-
-(Gesture to the users with zero scores)
-
-Now, let's talk about the most common result: a score of zero. This isn't necessarily a bug; it highlights two key challenges.
-
-First, this is a "needle in a haystack" problem. We're asking the model to find a few specific posts a user liked from a massive pool of over 95,000. That's incredibly difficult.
-
-Second, the nature of r/Showerthoughts means many users have very diverse tastes. They might upvote a philosophy post, a tech joke, and a pun all in one session. This creates a "blurry" taste profile that's hard for any content-based model to pin down.
-
-So while the LLM model showed the best average performance statistcally, no single model works for everyone. The classic TF-IDF is still very competitive, and niche models like SVM and Vector Negation can capture unique user tastes.
-
-For a real-world application, the best path forward would be a hybrid system—perhaps using a fast model like TF-IDF to get a list of candidates, and then using the deeper understanding of the LLM to re-rank those results for the user.
+Which really reminds us that for a real-world application, the best path forward would be a hybrid system — perhaps using a fast model like TF-IDF to get a list of candidates, and then using the deeper and more sophisticated methods to re-rank those results for the user.
