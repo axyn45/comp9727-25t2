@@ -1,0 +1,84 @@
+<svg width="100%" height="100%" viewBox="0 0 900 750" xmlns="http://www.w3.org/2000/svg">
+    <!-- Define arrow head marker -->
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+        refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+        </marker>
+    </defs>
+
+    <!-- Styles for elements -->
+    <style>
+        .box {
+            fill: #e0f7fa; 
+            stroke: #00796b; 
+            stroke-width: 2;
+        }
+        .text-main {
+            font-size: 18px;
+            font-weight: bold;
+            fill: #004d40;
+            text-anchor: middle;
+        }
+        .text-sub {
+            font-size: 15px;
+            fill: #333;
+            text-anchor: middle;
+        }
+        .arrow {
+            stroke: #333;
+            stroke-width: 2;
+            marker-end: url(#arrowhead);
+            fill: none;
+        }
+    </style>
+
+    <!-- Step 1: Input Post -->
+    <rect x="300" y="20" width="300" height="80" rx="10" class="box" />
+    <text x="450" y="55" class="text-main">1. Input: Single Reddit Post</text>
+    <text x="450" y="80" class="text-sub">(Title + Selftext)</text>
+
+    <!-- Arrow -->
+    <path class="arrow" d="M 450 100 V 140" />
+
+    <!-- Step 2: Preprocessing -->
+    <rect x="300" y="140" width="300" height="60" rx="10" class="box" />
+    <text x="450" y="175" class="text-main">2. Preprocessing</text>
+
+    <!-- Forking Arrows -->
+    <path class="arrow" d="M 450 200 V 240 L 250 280" />
+    <path class="arrow" d="M 450 200 V 240 L 650 280" />
+
+    <!-- Step 3a: Encode Title -->
+    <rect x="100" y="280" width="300" height="120" rx="10" class="box" />
+    <text x="250" y="310" class="text-main">3a. Encode Title</text>
+    <text x="250" y="340" class="text-sub">Using `all-mpnet-base-v2`</text>
+    <text x="250" y="370" class="text-sub">Output: Title Embedding</text>
+    <text x="250" y="390" class="text-sub">(768-dim vector)</text>
+
+    <!-- Step 3b: Encode Selftext -->
+    <rect x="500" y="280" width="300" height="120" rx="10" class="box" />
+    <text x="650" y="310" class="text-main">3b. Encode Selftext</text>
+    <text x="650" y="340" class="text-sub">Using `all-mpnet-base-v2`</text>
+    <text x="650" y="370" class="text-sub">Output: Selftext Embedding</text>
+    <text x="650" y="390" class="text-sub">(768-dim vector)</text>
+    
+    <!-- Joining Arrows -->
+    <path class="arrow" d="M 250 400 V 440 L 450 480" />
+    <path class="arrow" d="M 650 400 V 440 L 450 480" />
+
+    <!-- Step 4: Weighted Average -->
+    <rect x="300" y="480" width="300" height="100" rx="10" class="box" />
+    <text x="450" y="515" class="text-main">4. Combine Embeddings</text>
+    <text x="450" y="545" class="text-sub">Weighted Average:</text>
+    <text x="450" y="565" class="text-sub">(60% Title + 40% Selftext)</text>
+
+    <!-- Arrow -->
+    <path class="arrow" d="M 450 580 V 620" />
+
+    <!-- Step 5: Final Output -->
+    <rect x="300" y="620" width="300" height="80" rx="10" class="box" />
+    <text x="450" y="655" class="text-main">5. Final Output</text>
+    <text x="450" y="680" class="text-sub">Combined Post Embedding</text>
+
+</svg>
