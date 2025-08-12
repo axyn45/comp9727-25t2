@@ -19,7 +19,7 @@ The primary strength of this dataset is its scale and authenticity, providing re
 ## 3. LLM Embedding with Semantic Similarity
 This approach was designed to move beyond simple keyword matching and understand the deep semantic meaning of the content. The core idea is to represent each post as a dense vector in a high-dimensional space where proximity indicates semantic similarity.
 
-![alt text](img/llm-flowchart.svg)
+![LLM Embedding Workflow Chart](img/llm-flowchart.svg)
 
 - **Implementation and Library**: The entire workflow was implemented in Python using the sentence-transformers library, a framework built on top of PyTorch that simplifies the use of pre-trained models for embedding generation.
 
