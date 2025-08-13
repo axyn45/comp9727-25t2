@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1100 950">
+    <!-- Define arrow head marker -->
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#333"/>
+        </marker>
+    </defs>
+
+    <!-- Styles for elements -->
+    <style>
+        .box {
+            fill: #e3f2fd; 
+            stroke: #1e88e5; 
+            stroke-width: 2;
+        }
+        .data-box {
+            fill: #fff3e0;
+            stroke: #fb8c00;
+            stroke-width: 2;
+        }
+        .loop-box {
+            fill: none;
+            stroke: #546e7a;
+            stroke-width: 2;
+            stroke-dasharray: 10,5;
+        }
+        .text-main {
+            font-size: 18px;
+            font-weight: bold;
+            fill: #0d47a1;
+            text-anchor: middle;
+        }
+        .text-sub {
+            font-size: 15px;
+            fill: #333;
+            text-anchor: middle;
+        }
+        .text-loop {
+            font-size: 16px;
+            font-weight: bold;
+            fill: #37474f;
+            text-anchor: middle;
+        }
+        .arrow {
+            stroke: #333;
+            stroke-width: 2;
+            marker-end: url(#arrowhead);
+            fill: none;
+        }
+    </style>
+
+    <!-- Inputs -->
+    <rect x="50" y="0" width="300" height="80" rx="10" class="data-box"/>
+    <text x="200" y="35" class="text-main">Input A: User Vote History</text>
+    <text xmlns="http://www.w3.org/2000/svg" x="200" y="60" class="text-sub">(Top 20 Users)</text><path xmlns="http://www.w3.org/2000/svg" class="arrow" d="M 200 80 V 100"/>
+
+    <rect x="750" y="0" width="300" height="80" rx="10" class="data-box"/>
+    <text x="900" y="35" class="text-main">Input B: Item Feature Matrix</text>
+    <text xmlns="http://www.w3.org/2000/svg" x="900" y="60" class="text-sub">(e.g., LLM Embeddings, TF-IDF)</text><path xmlns="http://www.w3.org/2000/svg" class="arrow" d="M 900 80 V 100"/>
+
+    <!-- Loop Box -->
+    <rect x="25" y="120" width="1050" height="800" rx="20" class="loop-box"/>
+    <text x="550" y="150" class="text-loop">For Each of the 20 Users:</text>
+
+    <!-- Step 1: Split Data -->
+    <rect x="400" y="180" width="300" height="80" rx="10" class="box"/>
+    <text x="550" y="215" class="text-main">1. Split User's Vote History</text>
+    <text x="550" y="240" class="text-sub">(80% Train, 20% Test)</text>
+
+    <!-- Arrow -->
+    <path class="arrow" d="M 550 260 V 280"/>
+
+    <!-- Step 2: Build Profile -->
+    <rect x="400" y="300" width="300" height="80" rx="10" class="box"/>
+    <text x="550" y="335" class="text-main">2. Build User Profile</text>
+    <text x="550" y="360" class="text-sub">(Using 80% Train Set)</text>
+
+    <!-- Arrow -->
+    <path class="arrow" d="M 550 380 V 400"/>
+
+    <!-- Step 3: Generate Recs -->
+    <rect x="400" y="420" width="300" height="100" rx="10" class="box"/>
+    <text x="550" y="455" class="text-main">3. Generate Recommendations</text>
+    <text x="550" y="485" class="text-sub">Score all 95k+ posts against profile</text>
+    <text x="550" y="505" class="text-sub">Select Top 200 ranked posts</text>
+
+    <!-- Arrow -->
+    <path class="arrow" d="M 550 520 V 540"/>
+
+    <!-- Step 4: Evaluate -->
+    <rect x="400" y="560" width="300" height="100" rx="10" class="box"/>
+    <text x="550" y="595" class="text-main">4. Compare and Evaluate</text>
+    <text x="550" y="625" class="text-sub">Compare Top 200 Recs</text>
+    <text x="550" y="645" class="text-sub">with the 20% Test Set</text>
+
+    <!-- Arrow -->
+    <path class="arrow" d="M 550 660 V 680"/>
+
+    <!-- Step 5: Store Score -->
+    <rect x="400" y="700" width="300" height="60" rx="10" class="box"/>
+    <text x="550" y="735" class="text-main">5. Calculate and Store NDCG@200</text>
+
+    <!-- Arrow out of loop -->
+    <path class="arrow" d="M 550 750 V 790"/>
+    
+    <!-- Step 6: Aggregate -->
+    <rect x="400" y="810" width="300" height="80" rx="10" class="box"/>
+    <text x="550" y="845" class="text-main">6. Aggregate Results</text>
+    <text x="550" y="870" class="text-sub">Calculate Mean NDCG per model</text>
+
+</svg>
