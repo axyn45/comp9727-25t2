@@ -58,6 +58,10 @@ For our final evaluation, we identified the top 20 users with the highest number
 
 The primary strength of this dataset is its scale and authenticity, providing real-world user interaction data. Its main weakness, particularly for content-based filtering, is the idiosyncratic and diverse nature of the content, which presents a significant challenge in creating coherent user taste profiles.
 
+![Exploratory Analysis of the Dataset](img/dataset_analysis.jpg)
+*Figure 1: Exploratory analysis of the dataset. As from the chart, *
+
+
 ### 2.3 Methodologies
 
 To address the recommendation problem, our team developed and evaluated a suite of models. For evaluation, all methods produced a ranked list of 200 recommendations.
@@ -91,7 +95,7 @@ Or BERT, is a model that fundamentally changed how machines understand natural l
 
 Masked Language Modeling (MLM) is the pre-training technique introduced with BERT. Its biggest innovation was enabling a model to learn from both left and right context simultaneously, creating a truly bidirectional understanding of language.
 
-Instead of trying to predict the next word in a sentence, MLM randomly hides a certain percentage of words in the input text and then tasks the model with predicting only those hidden words. As stated in this paper[^1], the objective is to "predict the original vocabulary id of the masked word based only on its context."
+Instead of trying to predict the next word in a sentence, MLM randomly hides a certain percentage of words in the input text and then tasks the model with predicting only those hidden words. As stated in the paper by Google AI language team, the objective is to "predict the original vocabulary id of the masked word based only on its context."
 
 To prevent the model from simply learning to focus on the `[MASK]` token, BERT uses a strategy for the 15% of words it randomly chooses to hide:
 
@@ -179,36 +183,96 @@ We only have historical voting data, not explicit ratings. Furthermore, we lack 
 
 Also user tastes can change over time. An upvote from two years ago is likely a weaker indicator of a user's current interests than an upvote from last week.
 
-To address both issues, we used a temporal holdout for every evaluated user. We split each user's voting history chronologically, using the oldest 80% of votes for training and the newest 20% for testing. This practice for offline evaluation simulates a scenario where predicting a user's future behavior is based on their past actions. On the other hand a random split would be unrealistic, as it would allow the model to "see into the future" by training on recent data to predict older interactions, causing data leakage[^3] that would produce misleading results.
+To address both issues, we used a temporal holdout for every evaluated user. We split each user's voting history chronologically, using the oldest 80% of votes for training and the newest 20% for testing. This practice for offline evaluation simulates a scenario where predicting a user's future behavior is based on their past actions. On the other hand a random split would be unrealistic, as it would allow the model to "see into the future" by training on recent data to predict older interactions, causing data leakage[^4] that would produce misleading results.
 
-[^3]: [Data Leakage - Kaggle](https://www.kaggle.com/code/alexisbcook/data-leakage#Introduction)
+[^4]: [Data Leakage - Kaggle](https://www.kaggle.com/code/alexisbcook/data-leakage#Introduction)
 
 ### 3.2 Experimental Workflow
 
-Selection of Test Subjects: The exploratory data analysis revealed a long-tail distribution in user activity. To ensure our evaluation was based on a strong and reliable signal, we focused on the top 20 most active users within our `r/Showerthoughts` dataset, as determined by their total vote count.
+**Selection of Test Subjects**
 
-Per-User Temporal Holdout: For each of the 20 test users, we split their historical voting data chronologically. The oldest 80% of a user's votes were designated as the training set, used to construct their taste profile. The most recent 20% of their votes were held out as the test set or "ground truth," representing the content we aimed to predict. This temporal split is crucial as it prevents data leakage and accurately reflects a real-world use case.
+The exploratory data analysis revealed a long-tail distribution in user activity. To ensure our evaluation was based on a strong and reliable signal, we focused on the top 20 most active users within our `r/Showerthoughts` dataset, as determined by their total vote count.
 
-Recommendation Generation: For each user, every model was tasked with generating a ranked list of 200 personalized post recommendations. This list was created by scoring all 95,000+ posts in the dataset (excluding those already seen in the user's training set) against the user's profile.
+**Per-User Temporal Holdout**
 
-Performance Measurement: The generated list of 200 recommendations was then compared against the user's test set to calculate performance metrics for each model.
+For each of the 20 test users, we split their historical voting data chronologically. The oldest 80% of a user's votes were designated as the training set, used to construct their taste profile. The most recent 20% of their votes were held out as the test set or ground truth, representing the content we aimed to predict. This temporal split is crucial as it prevents data leakage and accurately reflects a real-world use case.
+
+**Recommendation Generation**
+
+For each user, every model was tasked with generating a ranked list of 200 personalized post recommendations. This list was created by scoring all 95,000+ posts in the dataset (excluding those already seen in the user's training set) against the user's profile.
+
+**Performance Measurement**
+
+The generated list of 200 recommendations was then compared against the user's test set to calculate performance metrics for each model.
 
 ![Evaluation Workflow](img/eval_workflow.svg)
 *Workflow for the evaluation process.*
 
 ### 3.3 Evaluation Metrics and Justification
 
-Choosing the right metric is critical, especially given the unique challenges of our dataset.
+Choosing the right metric is critical, especially given the unique challenges of our dataset. We initially considered standard classification metrics like `Precision@N` and `Recall@N`. However these were deemed unsuitable for our primary evaluation. As noted in our exploratory analysis, the dataset is extremely sparse. For any given user, the test set is a tiny fraction of the total post catalog. This means that Precision and Recall scores are often zero, not because a model is poor, but because the chance of a specific item landing in a short top-N list is statistically very low. This makes it difficult to meaningfully compare models.
 
-Initial Metric Considerations: We initially considered standard classification metrics like Precision@N and Recall@N. However, these were deemed unsuitable for our primary evaluation. As noted in our exploratory analysis, the interaction data is extremely sparse. For any given user, the test set (the "relevant" items) is a tiny fraction of the total post catalog. This "needle in a haystack" problem means that Precision and Recall scores are often zero, not because a model is poor, but because the chance of a specific item landing in a short top-N list is statistically very low. This makes it difficult to meaningfully compare models.
+Thus we came up with a better metric called Normalized Discounted Cumulative Gain (NDCG). We selected NDCG as our primary metric for its robustness and suitability for this task. Unlike Precision, which treats all positions in a recommendation list equally, NDCG is a rank-aware metric. It addresses the core requirement of placing the most relevant items at the top of the list as for a recommender. It does this by assigning a higher score for relevant items found at higher ranks and applying a logarithmic discount for items found further down. This directly reflects a better user experience.
 
-Primary Metric: Normalized Discounted Cumulative Gain (NDCG)
-We selected NDCG as our primary metric for its robustness and suitability for this task.
+**Justification for N=200**
 
-Why NDCG? Unlike Precision, which treats all positions in a recommendation list equally, NDCG is a rank-aware metric. It addresses the core requirement of a good recommender: placing the most relevant items at the top of the list. It does this by assigning a higher score for relevant items found at higher ranks and applying a logarithmic discount for items found further down. This directly reflects a better user experience.
-
-Justification for K=200: We chose to evaluate at a relatively large K of 200. In a massive catalog of over 95,000 posts, a stricter K (e.g., K=10) would be too unforgiving and would likely result in zero scores for most models, obscuring any performance differences. NDCG@200 provides a wider, more realistic window to evaluate a model's ability to rank relevant items highly, even if they don't appear in the absolute top positions. It allows us to differentiate between a model that ranks a relevant item at position 150 and one that fails to find it at all, a distinction that would be lost with a smaller K.
+We chose to evaluate at a relatively large N of 200. In a massive catalog of nearly 100,000 posts, a stricter N (e.g., N=10) would be too unforgiving and would likely result in zero scores for most models, obscuring any performance differences. `NDCG@200` provides a wider, more realistic window to evaluate a model's ability to rank relevant items highly, even if they don't appear in the absolute top positions. It allows us to differentiate between a model that ranks a relevant item at position 150 and one that fails to find it at all, a distinction that would be lost with a smaller N.
 
 ## 4 Reflection
 
-## 5 Future Work
+The process of developing this recommender system was a challenging within such limited time. Now with hindsight, many improvements could be made for better workflow and system performance.
+
+### 4.1 Pros of the System
+
+**Implementation of LLM Embeddings**
+
+My primary contribution was the implementation of the LLM-based feature encoding pipeline. The process of selecting a good model, generating high-dimensional embeddings for the entire post corpus, and storing them efficiently was a major success. This provided a powerful set of semantic features that proved to be one of the top-performing methods in our final evaluation.
+
+**Evolution of User Profiling**
+
+Moving beyond a simple average of a user's liked items to a time-decay weighted average was a successful decision. This added a layer of sophistication to the model, allowing it to better reflect a user's most recent interests, which is crucial for a platform with rapidly changing content like Reddit.
+
+**Rigorous and Iterative Evaluation**
+
+The team's collective process of refining our evaluation methodology was a highlight. We correctly identified that our initial attempts with metrics like Precision and Recall were insufficient due to the dataset's sparsity. Moving to a more robust, rank-aware metric like `NDCG@200` was a critical decision that allowed us to draw meaningful conclusions from our experiments.
+
+### 4.2 Cons of the System
+
+**The Limitations of Purely Content-Based Filtering**
+
+The most significant challenge was the inherent limitation of a purely content-based approach for this specific dataset. The frequent zero-scores in our results were not bugs, but rather a finding that for many users, taste is not easily captured by content similarity alone. The diverse and often unrelated nature of posts in r/Showerthoughts leads to "blurry" user profiles, making it incredibly difficult to predict specific future upvotes based on past ones.
+
+**Initial Misleading Metrics**
+
+An early attempt to frame the problem as a per-user vote prediction task was a notable failure. It resulted in a misleadingly perfect 100% accuracy score, which was a classic sign of a model overfitting on a small number of training examples in a high-dimensional feature space. This was a valuable lesson in the importance of choosing an appropriate evaluation framework that avoids such pitfalls.
+
+### 4.3 Possible Improvements
+
+**A Hybrid Approach**
+
+The biggest lesson I learned is that for a social platform like Reddit, collaborative and social signals are essential. The outstanding performance of the Vector Negation model which incorporated both negative feedback and a post's popularity (social proof) is compelling evidence of this. Next time I would advocate for building a hybrid model from the outset, and try combining the semantic power of LLM embeddings with collaborative filtering techniques that learn from the behavior of similar users.
+
+**Retrieve and Re-rank Pipeline**
+
+Scoring all 95,000+ posts for every user is computationally expensive and inefficient. A more practical and scalable approach would be a two-stage system. A fast, lightweight model (like an approximate nearest neighbor search on our LLM embeddings) could first retrieve a few hundred promising candidates. Then, a more complex and computationally intensive model could re-rank this much smaller set to produce the final, high-quality recommendation list.
+
+**More Advanced User Profiling**
+
+While the time-decay average was an improvement, I would explore more sophisticated methods for modeling user taste. Instead of representing a user with a single vector, we could model their interests as a mixture of multiple taste clusters, which would be better suited for users with diverse interests.
+
+## 5 Adequacy for Commercial Viability
+
+Even though this project is more academic and simplified, it's still necessary for us to assess the system's performance, data sufficiency and computational feasibility considering the commercial viability of our proposed recommender design.
+
+### 5.1 Performance
+
+One of the biggest concerns is the results so far are not promising for production environment. While models like Vector Negation and the LLM showed strong performance for certain users, the high number of zero-scores for others indicates a poor reliability. A commercial system requires consistent recommendations usually with high quality for the majority of its user base, not just a selected few. The current performance would likely lead to a unsatisfying experience for many users.
+
+### 5.2 Data Sufficiency
+
+The Reddit dataset from Kaggle is large, but it is not sufficient for building a robust commercial system due to its inherent limitations since it is only partial and lack lots of significant behavioral data for training and building user profile. One of the primary issues is the lack of complete user histories. For example we only have a fraction of the votes and no information on which posts users have seen but ignored. A commercial system would require access to the complete, real-time stream of user interactions to be effective for training the model.
+
+### 5.3 Feasibility
+
+The current approach of scoring all 95,000+ posts for every user is not computationally feasible for a real-time application since it's a time-consuming and compute demanding job. This method is acceptable for an offline experiment but would be far too slow and expensive to run for millions of users. The limitation is precisely why a more practical architecture, such as the two-stage retrieve and re-rank pipeline, would be necessary for a production environment.
+
