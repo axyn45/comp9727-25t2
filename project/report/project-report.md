@@ -58,9 +58,9 @@ For our final evaluation, we identified the top 20 users with the highest number
 
 The primary strength of this dataset is its scale and authenticity, providing real-world user interaction data. Its main weakness, particularly for content-based filtering, is the idiosyncratic and diverse nature of the content, which presents a significant challenge in creating coherent user taste profiles.
 
-![Exploratory Analysis of the Dataset](img/dataset_analysis.jpg)
-*Figure 1: Exploratory analysis of the dataset. As from the chart, *
-
+| ![Exploratory Analysis of the Dataset](img/dataset_analysis.jpg) |
+|:--:|
+| *Exploratory analysis of the dataset. As from the chart, * |
 
 ### 2.3 Methodologies
 
@@ -75,23 +75,23 @@ This classic approach served as our strong baseline to measure the effectiveness
 - Parameters: The vectorizer was configured with the following parameters: `stop_words='english'` to remove common words, `max_df=0.95` to ignore terms appearing in more than 95% of documents, and `min_df=2` to ignore very rare terms.
 - User Profiling & Ranking: The user profile was built using the same time-decay weighted average method as the LLM, and ranking was also performed using cosine similarity.
 
-#### 2.3.2 MLP Neural Network
 
-#### 2.3.3 LLM Embedding with Semantic Similarity
+##### 2.3.2 LLM Embedding with Semantic Similarity
 
-This approach was designed to move beyond simple keyword matching and understand the deep semantic meaning of the content. The core idea is to represent each post as a dense vector in a high-dimensional space where proximity indicates semantic similarity.
+In this project I mainly focused on utilizing LLM to generate entry embeddings. This approach was designed to move beyond simple keyword matching and understand the deep semantic meaning of the content. The core idea is to represent each post as a dense vector in a high-dimensional space where proximity indicates semantic similarity.
 
-![LLM Embedding Workflow Chart](img/llm-flowchart.svg)
-*Workflow of Generating Embeddings*
+| ![LLM Embedding Workflow Chart](img/llm-flowchart.png) |
+|:--:|
+| *Workflow of Generating Embeddings* |
 
 The entire workflow was implemented using the [sentence-transformers](https://sbert.net/) library, a framework built on top of PyTorch that simplifies the use of pre-trained models for embedding generation.
 
-#### 2.3.3.1 Bidirectional Encoder Representations from Transformers
+##### 2.3.2.1 Bidirectional Encoder Representations from Transformers
 Or BERT, is a model that fundamentally changed how machines understand natural language. Before BERT, models were largely unidirectional, meaning they read text either from left-to-right or right-to-left. BERT's key innovation was its ability to learn from the entire context of a sentence at once. As this paper by Google AI language[^1] states, "BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers." This bidirectional understanding allows it to grasp context and nuance in a way that was previously not possible.
 
 [^1]: 2018, BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, <https://doi.org/10.48550/arXiv.1810.04805>
 
-#### 2.3.3.2 Masked Language Modeling
+##### 2.3.2.2 Masked Language Modeling
 
 Masked Language Modeling (MLM) is the pre-training technique introduced with BERT. Its biggest innovation was enabling a model to learn from both left and right context simultaneously, creating a truly bidirectional understanding of language.
 
@@ -105,7 +105,7 @@ To prevent the model from simply learning to focus on the `[MASK]` token, BERT u
 
 This forces the model to maintain a rich contextual understanding of every word, as it never knows which one it will be asked to predict.
 
-#### 2.3.3.3 Permuted Language Modeling
+##### 2.3.2.3 Permuted Language Modeling
 
 Permuted Language Modeling (PLM) was introduced with XLNet to address a key limitation of MLM. While MLM learns from bidirectional context, it assumes that each masked word is predicted independently of the others.
 
@@ -117,10 +117,11 @@ This solves MLM's independence assumption. As this paper about MPNet[^2] explain
 
 The main weakness of PLM is that during its autoregressive prediction, it doesn't know the original positions of the words that come later in the permuted sequence. This creates a "discrepancy between pre-training and fine-tuning," because during fine-tuning, the model always sees the un-permuted sentence.
 
-![Unified View of MLM and PLM](img/mlm_plm.png)
-*Note. A unified view of MLM and PLM, where $x_i$ and $p_i$ represent token and position embeddings. The left side in both MLM (a) and PLM (b) are in original order, while the right side in both MLM (a) and PLM (b) are in permuted order and are regarded as the unified view. From "MPNet: Masked and Permuted Pre-training for Language Understanding," by Kaitao Song, 2020, Nanjing University of Science and Technology*
+| ![Unified View of MLM and PLM](img/mlm_plm.png) |
+|:--:|
+| *Note. A unified view of MLM and PLM, where $x_i$ and $p_i$ represent token and position embeddings. The left side in both MLM (a) and PLM (b) are in original order, while the right side in both MLM (a) and PLM (b) are in permuted order and are regarded as the unified view. From "MPNet: Masked and Permuted Pre-training for Language Understanding," by Kaitao Song, 2020, Nanjing University of Science and Technology* |
 
-#### 2.3.3.4 Neural Network Architecture and Training
+##### 2.3.2.4 Neural Network Architecture and Training
 
 We selected the `all-mpnet-base-v2` model, a high-performance sentence-transformer variant. The model was pre-trained on a massive dataset of over 1 billion text pairs from a diverse range of sources, including a large portion of Reddit comments[^3]. It was then fine-tuned using a contrastive learning objective, where the model learns to pull semantically similar sentences closer together in the vector space while pushing dissimilar ones apart. The model outputs a dense vector of 768 dimensions for each input text.
 
@@ -132,10 +133,11 @@ MLM assumes that each masked word is predicted independently of the others. For 
 
 When PLM predicting a word in a shuffled sequence, the model doesn't know the original positions of the words that come after it in the shuffle. This creates a mismatch between how the model is pre-trained and how it's used for downstream tasks, where it always sees the full, ordered sentence. With position compensation however, MPNet can take auxiliary position information as input to make the model see a full sentence and thus reducing the position discrepancy.
 
-![Attention Mask of MPNet](img/mpnet_structure.png)
-*Note. (a) The structure of MPNet. (b) The attention mask of MPNet. The light grey lines in (a) represent the bidirectional self-attention in the non-predicted part $(x_{z \le c},M_{z \gt c})=(x_1,x_5,x_3,[M],[M],[M])$, which correspond to the light grey attention mask in (b). The blue and green mask in (b) represent the attention mask in content and query streams in two-stream selfattention, which correspond to the blue, green and black lines in (a). From "MPNet: Masked and Permuted Pre-training for Language Understanding," by Kaitao Song, 2020, Nanjing University of Science and Technology*
+| ![Attention Mask of MPNet](img/mpnet_structure.png) |
+|:--:|
+| *Note. (a) The structure of MPNet. (b) The attention mask of MPNet. The light grey lines in (a) represent the bidirectional self-attention in the non-predicted part $(x_{z \le c},M_{z \gt c})=(x_1,x_5,x_3,[M],[M],[M])$, which correspond to the light grey attention mask in (b). The blue and green mask in (b) represent the attention mask in content and query streams in two-stream selfattention, which correspond to the blue, green and black lines in (a). From "MPNet: Masked and Permuted Pre-training for Language Understanding," by Kaitao Song, 2020, Nanjing University of Science and Technology* |
 
-#### 2.3.3.5 Suitability for Generating Embeddings
+##### 2.3.2.5 Suitability for Generating Embeddings
 
 The posts in `r/Showerthoughts` are not just simple statements; they often rely on clever wordplay, puns, or complex logical connections. The ability of MPNet to model the dependency between words is crucial for correctly interpreting these nuanced thoughts.
 
@@ -143,23 +145,107 @@ Also, by eliminating the position discrepancy, MPNet ensures that its understand
 
 [^3]: [sentence-transformers/all-mpnet-base-v2 · Hugging Face](https://huggingface.co/sentence-transformers/all-mpnet-base-v2#training-data)
 
-#### 2.3.3.6 Preprocessing
+##### 2.3.2.6 Preprocessing
 
 For each post, the title and selftext were extracted. Since titles are often more concise and representative of a post's core idea, we created a single representative vector for each post by calculating a weighted average of the two embeddings. The title embedding was given a 80% weight, and the selftext embedding was given a 20% weight. This combined vector was then used for all subsequent calculations.
 
-#### 2.3.3.7 User Profiling
+##### 2.3.2.7 User Profiling
 
 To model a user's taste, we constructed a profile vector from their historical upvotes. To account for evolving interests, we implemented a time-decay weighted average. Using a decay_rate of 0.95, this method gives exponentially more weight to recent upvotes, ensuring the user profile is more reflective of their current tastes rather than being a simple average of all past interactions.
 
-#### 2.3.3.8 Ranking Function
+##### 2.3.2.8 Ranking Function
 
 Recommendations were generated by ranking all candidate posts based on their similarity to the user's profile. We used Cosine Similarity as our similarity function, which measures the cosine of the angle between the user profile vector and each post vector. A higher cosine similarity score (closer to 1.0) indicates a stronger semantic match. The top 200 posts with the highest similarity scores were selected as the final recommendations for evaluation.
 
-#### 2.3.4 Support Vector Machine
+#### 2.3.3 Support Vector Machine
 
-#### 2.3.5 Vector Negation
+##### 2.3.3.1 Core Concept and Goal
+
+The Support Vector Machine (SVM) approach frames the recommendation task as a personalized binary classification problem. For each individual user, we aimed to build a dedicated model that could distinguish between content they are likely to upvote and content they are likely to downvote.
+- **Objective:** To predict a user's vote on a given post.
+- **Approach:** For each of our top 20 users, we trained a separate SVM classifier. The model learns a decision boundary, or hyperplane, in a high-dimensional feature space that best separates the posts the user has historically upvoted from those they have downvoted. Recommendations are then generated by ranking new posts based on their distance from this learned boundary.
+
+##### 2.3.3.2 Model Selection and Parameters
+
+We chose a Linear SVM for its efficiency and effectiveness with high-dimensional, sparse text data.
+
+- **Implementation:** We used the SVC (Support Vector Classifier) class from Python's scikit-learn library.
+- **Kernel:** A linear kernel was selected. This is a standard and computationally efficient choice for text classification problems where the number of features (i.e., the vocabulary size from TF-IDF) is large.
+- **Class Weighting:** The `class_weight` parameter was set to `balanced`. This is a crucial step that automatically adjusts the weights of the classes to be inversely proportional to their frequencies. It mitigates the issue of data imbalance (where a user might have many more upvotes than downvotes, or vice versa), preventing the model from being biased towards the majority class.
+- **Feature Scaling:** Before training, the TF-IDF feature vectors were normalized using `StandardScaler(with_mean=False)`. Scaling is essential for SVMs as their decision boundary is sensitive to the magnitude of feature values. We set `with_mean=False` because centering sparse data (like TF-IDF output) would destroy its sparsity and make it computationally intractable.
+
+##### 2.3.3.3 General Workflow
+
+**Data Preparation and Feature Engineering**
+
+For each post in the dataset, the title and selftext were concatenated into a single text string to create a comprehensive content representation.
+
+This combined text was then converted into numerical feature vectors using TfidfVectorizer from scikit-learn. We limited the vocabulary to the top 5000 features and removed common English stop words to reduce noise.
+
+**Per-User Model Training**
+
+For each of the top 20 users, we filtered their voting history from the 80% training split of the data. A user was only considered for modeling if they had a minimum of 3 upvotes and 3 downvotes in their training history, ensuring the classifier had examples of both classes to learn from.
+
+The corresponding TF-IDF vectors for their upvoted and downvoted posts were stacked into a training matrix X_train, and a corresponding label vector y_train was created (1 for upvotes, 0 for downvotes).The trained SVM classifier then learned the optimal hyperplane to separate these two classes in the 5000-dimensional feature space.
+
+**Generating Recommendations**
+
+For each user with a trained model, we took all 95,000+ posts from the dataset (excluding those in the user's training set). We used the model's `decision_function` to calculate a score for each of these posts. This score represents the signed distance of a post's vector from the learned hyperplane.
+
+A larger positive distance indicates a higher confidence that the post belongs to the "upvote" class. The posts were ranked in descending order based on this score, and the top 200 were selected as the final recommendations for evaluation.
+
+#### 2.3.4 Vector Negation
+
+Vector Negation (VN) model is a sophisticated hybrid approach that was the top-performing method in our experiments. Its core innovation is to create a highly personalized user profile by not only modeling what a user likes but also by explicitly modeling and removing the concepts they dislike.
+
+The main objective is to generate recommendations that are similar to a user's upvoted content while being dissimilar to their downvoted content. This method represents user tastes and post content in a vector space. It constructs a "positive" user profile by combining the vectors of keywords from upvoted posts. It then purifies this profile by projecting it onto the subspace of "negative" keywords (from downvoted posts) and subtracting this projection. This results in a final user profile vector that is orthogonal to the concepts the user dislikes.
+
+##### 2.3.4.1 Model Selection
+
+- **Keyword Extraction:** We used the YAKE! library, a lightweight and unsupervised keyword extractor. This approach was chosen to distill the most important concepts from each post's text without requiring a pre-trained corpus, focusing only on the local statistical features of the text.
+
+- **Word Embeddings:** Keywords were converted into vectors using BPEmb, a collection of pre-trained subword embeddings based on Byte-Pair Encoding. We used the English model with a vocabulary size of 50,000. BPEmb was chosen for its ability to handle out-of-vocabulary words and its strong performance in general NLP tasks.
+
+- **Hybrid Scoring:** The final recommendation score is a weighted sum of two components:
+
+  1. **Content Score:** The cosine similarity between the post's vector and the user's final profile vector.
+  2. **Social Score:** The post's total upvote count, normalized using MinMaxScaler to be between 0 and 1. The up_weight hyperparameter controls the balance between these two scores. Our experiments showed that a weight of 0.5 provided the best results, giving equal importance to personal taste and social proof.
+
+##### 2.3.4.2 General Workflow
+
+**Data Preparation and Feature Engineering**
+
+For each post, the `YAKE!` algorithm was used to extract a list of keywords, which were then converted into a "bag of words." The upvote count for each post was normalized to a score between 0 and 1 to be used in the final ranking step.
+
+**Per-User Profile Construction**
+
+For each of the top 20 users, their voting history from the training set was separated into upvoted and downvoted posts. Then a  "positive" vector was created by summing the BPEmb vectors of all unique keywords found in the user's upvoted posts. This is based on the principle that A OR B OR C can be modeled by the linear combination of their vectors. Meanwhile, a set of "negative" keywords was created from the user's downvoted posts.
+
+To purify the user profile, we performed the following steps:
+
+- An orthonormal basis for the subspace spanned by the negative keyword vectors was computed using Singular Value Decomposition (SVD).
+- The positive profile vector was projected onto this "dislike" subspace.
+- This projection was then subtracted from the original positive profile vector. The resulting vector is orthogonal to the user's disliked concepts, effectively removing unwanted themes from their taste profile.
+
+**Generating Recommendations**
+
+For each user, all candidate posts were scored.
+
+The final score for each post was calculated as:
+
+$$score = {1-up\_weight}*content\_similarity +\\up\_weight * normalized\_upvotes$$
+
+The posts were ranked in descending order based on this final hybrid score, and the top 200 were selected as the final recommendations for evaluation.
+
+#### 2.3.5 MLP Neural Network
 
 #### 2.3.6 Sentence-BERT and LightFM
+
+This method implements a hybrid recommender system that combines the strengths of both content-based and collaborative filtering. The core idea is to enrich a powerful matrix factorization model (LightFM) with a diverse set of high-quality content features, with Sentence-BERT embeddings serving as the primary semantic component.
+
+To maximize the relevance and diversity of recommendations, we used the LightFM framework, which is specifically designed to learn from such data, and supply it with a rich feature set for each post. This allows the model to make recommendations even for new items and to understand the nuanced relationships between content features and user preferences.
+
+##### 2.3.6.1
 
 ## 3 Evaluation
 
@@ -205,8 +291,9 @@ For each user, every model was tasked with generating a ranked list of 200 perso
 
 The generated list of 200 recommendations was then compared against the user's test set to calculate performance metrics for each model.
 
-![Evaluation Workflow](img/eval_workflow.svg)
-*Workflow for the evaluation process.*
+| ![Evaluation Workflow](img/eval_workflow.png) |
+|:-:|
+| *Workflow for the evaluation process.* |
 
 ### 3.3 Evaluation Metrics and Justification
 
@@ -276,3 +363,50 @@ The Reddit dataset from Kaggle is large, but it is not sufficient for building a
 
 The current approach of scoring all 95,000+ posts for every user is not computationally feasible for a real-time application since it's a time-consuming and compute demanding job. This method is acceptable for an offline experiment but would be far too slow and expensive to run for millions of users. The limitation is precisely why a more practical architecture, such as the two-stage retrieve and re-rank pipeline, would be necessary for a production environment.
 
+## 6. Future Directions and Extensions
+
+Our project successfully demonstrated the potential of content-based filtering, but we also noticed that several other advanced techniques could significantly enhance its performance and utility. In this section I'll explore how sequential social recommendation and more advanced LLM applications could be integrated into our system.
+
+**Sequential Recommendation**
+
+Our current time-decay model is a simplified form of temporal modeling. However a more sophisticated sequential recommendation approach could capture more complex patterns in a user's session.
+
+Instead of just weighting past votes, we could model a user's upvote history as a sequence. Using techniques like Markov Models or a Recurrent Neural Network (RNN), we could predict the next likely post a user would be interested in based on the specific sequence of their recent upvotes. This is particularly relevant for "session-based" browsing, where a user might explore a specific theme (e.g., a series of posts about a single news event) before moving on to another.
+
+We would need the user's voting history ordered by timestamp. The current dataset provides timestamps, so this is highly feasible. It would allow the recommender to be more adaptive and responsive to a user's current interests, rather than just their long-term average taste.
+
+| ![Sequential Recommendation](img/seq_rec.png) |
+|:--:|
+| *Note. An example of how a sequential model makes recommendations. From "Fusing Similarity Models with Markov Chains for Sparse Sequential Recommendation," by Ruining He, Julian McAuley, 2010, University of California, San Diego* |
+
+| ![Feedforward vs recurrent neural networks](img/rnn.png) |
+|:--:|
+| *Note. Recurrent neural networks use forward propagation and backpropagation through time (BPTT) algorithms to determine the gradients. The principles of BPTT are the same as traditional backpropagation, where the model trains itself by calculating errors from its output layer to its input layer. BPTT differs from the traditional approach in that BPTT sums errors at each time step whereas feedforward networks do not need to sum errors as they do not share parameters across each layer. From "What is a recurrent neural network (RNN)," by Cole Stryker, 2024, IBM* |
+
+**Context-Aware Recommendation**
+
+A user's preferences can change dramatically based on their current context. A context-aware system could adapt its recommendations accordingly.
+
+We could incorporate contextual features into our model. For example, a user browsing on a mobile device on a Friday night might prefer shorter, more humorous content, while the same user browsing on a desktop during a weekday might be more receptive to longer, more serious posts. We could use techniques like Factorization Machines to model these complex interactions between user, item and context.
+
+| ![Context-aware Sequential Recommendation](img/context-aware.png) |
+|:--:|
+| *Note. The purchasing sequence of a user as an example of context-aware sequential recommendation. The left part shows input and transition contexts in a behavioral sequence. Input contexts mean external situations that users conduct behaviors, and transition contexts denote time intervals between adjacent behaviors. The right part illustrates how input and transition contexts contribute to predicting a user’s next behavior in recurrent neural networks. From "Context-aware Sequential Recommendation," by Qiang Liu, Shu Wu, 2016, IEEE 16th International Conference on Data Mining* |
+
+We would need to augment our dataset with contextual information for each vote, such as the timestamp (which is already included), the user's device type, and potentially their geo location. While device and location data are not in the current dataset, they are standard in commercial systems. Implementing this would significantly improve the personalization and relevance of the recommendations.
+
+**Social Network Recommendation**
+
+Our project did not explicitly model the social connections between users, which is a powerful source of information on a platform like Reddit. In the furture, we could construct a social graph based on user interactions. For example, we could infer a connection between two users if they frequently comment on or upvote the same posts. A user's recommendations could then be influenced by the activity of their "social neighbors." This is a form of collaborative filtering that could help users discover new content that people with similar tastes have enjoyed.
+
+This is less realistic with the current dataset. The lack of comment data is a major hurdle, but if it were available, this extension would be a powerful way to combat the low precision profile problem by leveraging the tastes of similar users.
+
+**Advanced LLM Applications**
+
+We only used an LLM for feature encoding, but its capabilities are far beyond that. We could use an LLM in a generative or conversational capacity. As shown introduced the week 8 slides, we could use a task-specific prompt to ask an LLM to generate an explanation for why a post is being recommended, revealing more details on the logic of recommending. No new data is required for this, but it would necessitate a significant change in the system's architecture to incorporate real-time LLM API calls.
+
+While this method is more computationally expensive, providing explainable recommendations is a major area of research and can significantly improve user trust and satisfaction with a recommender system.
+
+## 6 Acknowledgements
+
+Thanks for all members in the "AskReddit" group. We've been through a lot of challenges and always stayed together to tackle them down. Really enjoyed cooperating with you guys. Also thanks for Mr. Wobcke's effort and other tutors' dedication to COMP9727 this term. I feel like really gained tons of new discoveries and insights in the recommender systems, which made me more interested in digging into this industry even further in the future.
