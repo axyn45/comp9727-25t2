@@ -3,20 +3,13 @@
 > **Author:** Bob
 > **zID:** z123456
 
-**Marking**
-
-- Content: Novel insights made concerning experiments and results.
-- Structure: Logically organized into a coherent, easy to understand argument.
-- Analysis: Novel interpretations of results supported by evidence.
-- Presentation: Engaging style with clear explanations throughout.
-
 ## 1 Commercial System Analysis: Reddit's Recommendation Engine
 
 The primary commercial system for our recommendation scenario is Reddit's own multifaceted recommendation engine. It is designed to keep millions of users engaged by personalizing the content they see across the platform. Understanding its strengths and limitations is key to motivating our own project's proposal.
 
 ### 1.1 Mechanisms to recommend content
 
-The personalized home feed is the main touchpoint for users. The default "Best" sort is a complex algorithm that prioritizes fresh content from communities a user frequently interacts with. It considers not only post scores and age but also the user's historical engagement within those subreddits.
+The personalized home feed is the main touchpoint for users. The default best sort is a complex algorithm that prioritizes content from communities a user frequently interacts with. It considers not only post scores and age but also the user's historical activity within those subreddits.
 
 Besides, features like the "Explore" tab and notifications for trending posts are designed to introduce users to new content and communities that are algorithmically determined to be relevant to their interests.
 
@@ -34,7 +27,7 @@ Reddit's system has several undeniable strengths:
 Despite its strengths, Reddit's system has inherent weaknesses that directly motivate the approach taken in our project:
 
 - The "Filter Bubble" Effect: By heavily prioritizing content from a user's subscribed subreddits, the system can inadvertently limit discovery. It excels at showing a user more of what they already know, but it is less effective at helping them discover new, thematically similar content from communities they don't follow.
-- Limited Granularity Within Subreddits: Reddit's recommendations are often driven by community-level signals rather than the specific content of individual posts. A user might upvote a philosophical post in a large, diverse subreddit like r/Showerthoughts, but the algorithm might then recommend a popular but unrelated pun from the same community simply because it's popular. It struggles to differentiate between the varied content within a single subreddit.
+- Limited Granularity Within Subreddits: Reddit's recommendations are often driven by community-level signals rather than the specific content of individual posts. A user might upvote a philosophical post in a large, diverse subreddit like r/Showerthoughts, but the algorithm might then recommend a popular but unrelated pun from the same community. It struggles to differentiate between the varied content within a single subreddit.
 
 Our project was designed to address these specific limitations. By focusing on purely content-based filtering, we aimed to build a system that recommends posts based on what they are about, not just where they were posted. Our core proposal was to see if we could break the "filter bubble" by identifying thematically similar posts regardless of their subreddit of origin.
 
@@ -52,15 +45,15 @@ Given the project's scope, we made the strategic decision to narrow our focus to
 
 We filtered the master submissions file to isolate all posts belonging to r/Showerthoughts, resulting in a corpus of 95,084 unique posts after removing entries with no title.
 
-We then filtered the 44_million_vote.txt file to extract all historical upvotes corresponding to these posts.
+We then filtered the `44_million_vote.txt` file to extract all historical upvotes corresponding to these posts.
 
-For our final evaluation, we identified the top 20 users with the highest number of upvotes within our dataset to ensure our analysis was based on the platform's most engaged members.
+And to ensure our analysis focused on the platform's most engaged members, we identified the top 20 users with the most upvotes in our dataset.
 
 The primary strength of this dataset is its scale and authenticity, providing real-world user interaction data. Its main weakness, particularly for content-based filtering, is the idiosyncratic and diverse nature of the content, which presents a significant challenge in creating coherent user taste profiles.
 
 | ![Exploratory Analysis of the Dataset](img/dataset_analysis.jpg) |
 |:--:|
-| *Exploratory analysis of the dataset. As from the chart, * |
+| *Exploratory analysis of the dataset. The interaction is extremely unbalanced. Vast majority of users have very few positive feedbacks, and only a small number of users are highly active.* |
 
 ### 2.3 Methodologies
 
@@ -75,8 +68,7 @@ This classic approach served as our strong baseline to measure the effectiveness
 - Parameters: The vectorizer was configured with the following parameters: `stop_words='english'` to remove common words, `max_df=0.95` to ignore terms appearing in more than 95% of documents, and `min_df=2` to ignore very rare terms.
 - User Profiling & Ranking: The user profile was built using the same time-decay weighted average method as the LLM, and ranking was also performed using cosine similarity.
 
-
-##### 2.3.2 LLM Embedding with Semantic Similarity
+#### 2.3.2 LLM Embedding with Semantic Similarity
 
 In this project I mainly focused on utilizing LLM to generate entry embeddings. This approach was designed to move beyond simple keyword matching and understand the deep semantic meaning of the content. The core idea is to represent each post as a dense vector in a high-dimensional space where proximity indicates semantic similarity.
 
@@ -87,6 +79,7 @@ In this project I mainly focused on utilizing LLM to generate entry embeddings. 
 The entire workflow was implemented using the [sentence-transformers](https://sbert.net/) library, a framework built on top of PyTorch that simplifies the use of pre-trained models for embedding generation.
 
 ##### 2.3.2.1 Bidirectional Encoder Representations from Transformers
+
 Or BERT, is a model that fundamentally changed how machines understand natural language. Before BERT, models were largely unidirectional, meaning they read text either from left-to-right or right-to-left. BERT's key innovation was its ability to learn from the entire context of a sentence at once. As this paper by Google AI language[^1] states, "BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers." This bidirectional understanding allows it to grasp context and nuance in a way that was previously not possible.
 
 [^1]: 2018, BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, <https://doi.org/10.48550/arXiv.1810.04805>
@@ -123,7 +116,7 @@ The main weakness of PLM is that during its autoregressive prediction, it doesn'
 
 ##### 2.3.2.4 Neural Network Architecture and Training
 
-We selected the `all-mpnet-base-v2` model, a high-performance sentence-transformer variant. The model was pre-trained on a massive dataset of over 1 billion text pairs from a diverse range of sources, including a large portion of Reddit comments[^3]. It was then fine-tuned using a contrastive learning objective, where the model learns to pull semantically similar sentences closer together in the vector space while pushing dissimilar ones apart. The model outputs a dense vector of 768 dimensions for each input text.
+We selected the `all-mpnet-base-v2` model, a high-performance sentence-transformer variant. The model was pre-trained on a massive dataset of over 1 billion text pairs from a diverse range of sources, including a large portion of Reddit comments[^3]. It was then fine-tuned using a contrastive learning objective, where the model learns to pull semantically similar sentences closer together in the vector space while pushing dissimilar ones apart. After processing, the model provides us with a 768-dimension vector for each post, which serves as its semantic fingerprint.
 
 **Hybrid Approach**
 
@@ -151,7 +144,7 @@ For each post, the title and selftext were extracted. Since titles are often mor
 
 ##### 2.3.2.7 User Profiling
 
-To model a user's taste, we constructed a profile vector from their historical upvotes. To account for evolving interests, we implemented a time-decay weighted average. Using a decay_rate of 0.95, this method gives exponentially more weight to recent upvotes, ensuring the user profile is more reflective of their current tastes rather than being a simple average of all past interactions.
+To model a user's taste, we constructed a profile vector from their historical upvotes. To account for evolving interests, we implemented a time-decay weighted average. Using a `decay_rate` of 0.95, this method gives exponentially more weight to recent upvotes, ensuring the user profile is more reflective of their current tastes rather than being a simple average of all past interactions.
 
 ##### 2.3.2.8 Ranking Function
 
@@ -161,7 +154,8 @@ Recommendations were generated by ranking all candidate posts based on their sim
 
 ##### 2.3.3.1 Core Concept and Goal
 
-The Support Vector Machine (SVM) approach frames the recommendation task as a personalized binary classification problem. For each individual user, we aimed to build a dedicated model that could distinguish between content they are likely to upvote and content they are likely to downvote.
+We decided to treat the recommendation task as a classification problem: could we predict whether a user would upvote or downvote a post? This led us to the Support Vector Machine (SVM), as it allowed us to build a dedicated model for each user designed to learn the line between content they like and dislike.
+
 - **Objective:** To predict a user's vote on a given post.
 - **Approach:** For each of our top 20 users, we trained a separate SVM classifier. The model learns a decision boundary, or hyperplane, in a high-dimensional feature space that best separates the posts the user has historically upvoted from those they have downvoted. Recommendations are then generated by ranking new posts based on their distance from this learned boundary.
 
@@ -186,7 +180,7 @@ This combined text was then converted into numerical feature vectors using Tfidf
 
 For each of the top 20 users, we filtered their voting history from the 80% training split of the data. A user was only considered for modeling if they had a minimum of 3 upvotes and 3 downvotes in their training history, ensuring the classifier had examples of both classes to learn from.
 
-The corresponding TF-IDF vectors for their upvoted and downvoted posts were stacked into a training matrix X_train, and a corresponding label vector y_train was created (1 for upvotes, 0 for downvotes).The trained SVM classifier then learned the optimal hyperplane to separate these two classes in the 5000-dimensional feature space.
+The corresponding TF-IDF vectors for their upvoted and downvoted posts were stacked into a training matrix $X_{train}$, and a corresponding label vector $y_{train}$ was created (1 for upvotes, 0 for downvotes).The trained SVM classifier then learned the optimal hyperplane to separate these two classes in the 5000-dimensional feature space.
 
 **Generating Recommendations**
 
@@ -209,7 +203,7 @@ The main objective is to generate recommendations that are similar to a user's u
 - **Hybrid Scoring:** The final recommendation score is a weighted sum of two components:
 
   1. **Content Score:** The cosine similarity between the post's vector and the user's final profile vector.
-  2. **Social Score:** The post's total upvote count, normalized using MinMaxScaler to be between 0 and 1. The up_weight hyperparameter controls the balance between these two scores. Our experiments showed that a weight of 0.5 provided the best results, giving equal importance to personal taste and social proof.
+  2. **Social Score:** The post's total upvote count, normalized using MinMaxScaler to be between 0 and 1. The `up_weight` hyperparameter controls the balance between these two scores. Our experiments showed that a weight of 0.5 provided the best results, giving equal importance to personal taste and social proof.
 
 ##### 2.3.4.2 General Workflow
 
@@ -229,9 +223,7 @@ To purify the user profile, we performed the following steps:
 
 **Generating Recommendations**
 
-For each user, all candidate posts were scored.
-
-The final score for each post was calculated as:
+For each user, all candidate posts were scored. The final score for each post was calculated as:
 
 $$score = {1-up\_weight}*content\_similarity +\\up\_weight * normalized\_upvotes$$
 
@@ -239,13 +231,48 @@ The posts were ranked in descending order based on this final hybrid score, and 
 
 #### 2.3.5 MLP Neural Network
 
+This approach utilizes a standard Multi-Layer Perceptron (MLP) to tackle the recommendation task. The problem is framed as a personalized binary classification problem for each user, where the goal is to predict whether a user will upvote or downvote a given post based on its content.
+
+##### 2.3.5.1 Model Selection
+
+We used a standard MLP architecture, leveraging its ability to learn from complex data without extensive feature engineering.
+
+- **Implementation/Library:** We used the MLPClassifier from Python's scikit-learn library.
+- **Neural Network Architecture:** The final model consisted of two hidden layers with 128 and 64 nodes, respectively. This architecture was chosen after experimentation as it provided a good balance between model capacity and the risk of overfitting on the relatively small per-user datasets.
+- **Solver and Loss Function:** We used the default adam solver, an efficient stochastic gradient-based optimizer, and the default log-loss (binary cross-entropy) function, which is standard for binary classification tasks.
+- **Data Imbalance Handling:** A user's voting history is often highly imbalanced (e.g., far more upvotes than downvotes). To address this, we used the SMOTE (Synthetic Minority Over-sampling Technique) from the im-blearn library. SMOTE balances the dataset by generating new, synthetic examples of the minority class, preventing the model from becoming biased towards the majority class.
+
+##### 2.3.5.2 Workflow
+
+The `title` of each post was preprocessed by converting it to lowercase, removing non-alphanumeric characters, tokenizing it, removing common English stop words, and applying Porter stemming to reduce words to their root form. The processed text was then converted into numerical feature vectors using `TfidfVectorizer` from `scikit-learn`, with the vocabulary limited to the top 5000 features and a `min_df` of 3 to filter out extremely rare terms.
+
+In the training section, for each of the top 20 users, their voting history was merged with the post content. We first sorted the data chronologically and then performed a temporal split. We used the oldest 80% of a user's posts for training and reserved the newest 20% for testing.
+
+The SMOTE algorithm was applied to the training set to create a balanced dataset of upvotes and downvotes. The `MLPClassifier` was then trained on this resampled data for a maximum of 50 iterations.
+
+For each user, the trained MLP model was used to predict the probability of an "upvote" for every post in the test set. These posts were then ranked in descending order based on their predicted upvote probability. The top 200 posts from this ranked list were selected as the final recommendations for evaluation.
+
 #### 2.3.6 Sentence-BERT and LightFM
 
 This method implements a hybrid recommender system that combines the strengths of both content-based and collaborative filtering. The core idea is to enrich a powerful matrix factorization model (LightFM) with a diverse set of high-quality content features, with Sentence-BERT embeddings serving as the primary semantic component.
 
 To maximize the relevance and diversity of recommendations, we used the LightFM framework, which is specifically designed to learn from such data, and supply it with a rich feature set for each post. This allows the model to make recommendations even for new items and to understand the nuanced relationships between content features and user preferences.
 
-##### 2.3.6.1
+##### 2.3.6.1 Methodology
+
+**Recommendation Model**
+
+LightFM is ideal for this task as it natively supports implicit feedback (upvotes) and can seamlessly incorporate both user-item interactions and item features into a single learning framework.
+
+We performed a hyperparameter search over several loss functions suitable for implicit feedback, including `warp`, `warp-kos`, and `bpr`. The BPR (Bayesian Personalized Ranking) loss function was selected as it yielded the best performance on our validation set. The final model was trained with `no_components=30`, `user_alpha=1e-07` (user regularization), `item_alpha=1e-07` (item regularization), and a `learning_rate=0.05`.
+
+**Feature Engineering**
+
+We used the lightweight but powerful `all-MiniLM-L6-v2` model from the sentence-transformers library. The `title` and `selftext` from the original dataset were combined, and the SBERT model was used to generate a 384-dimensional embedding for each post. The embeddings were normalized to prevent their magnitude from dominating the learning process.
+
+**Sentiment Scores**
+
+We used the TextBlob library to generate a sentiment score for each post. To use numerical metadata like `num_comments`, `ups`, and `age_hours`, we first applied a `log(1+x)` transformation to handle their long-tail distributions. These transformed features were then scaled to a `[0, 1]` range using `MinMaxScaler`.
 
 ## 3 Evaluation
 
@@ -269,7 +296,7 @@ We only have historical voting data, not explicit ratings. Furthermore, we lack 
 
 Also user tastes can change over time. An upvote from two years ago is likely a weaker indicator of a user's current interests than an upvote from last week.
 
-To address both issues, we used a temporal holdout for every evaluated user. We split each user's voting history chronologically, using the oldest 80% of votes for training and the newest 20% for testing. This practice for offline evaluation simulates a scenario where predicting a user's future behavior is based on their past actions. On the other hand a random split would be unrealistic, as it would allow the model to "see into the future" by training on recent data to predict older interactions, causing data leakage[^4] that would produce misleading results.
+We tackled both problems with a temporal holdout for each user. We split each user's voting history chronologically, using the oldest 80% of votes for training and the newest 20% for testing. This practice for offline evaluation simulates a scenario where predicting a user's future behavior is based on their past actions. On the other hand a random split would be unrealistic, as it would allow the model to "see into the future" by training on recent data to predict older interactions, causing data leakage[^4] that would produce misleading results.
 
 [^4]: [Data Leakage - Kaggle](https://www.kaggle.com/code/alexisbcook/data-leakage#Introduction)
 
@@ -305,6 +332,44 @@ Thus we came up with a better metric called Normalized Discounted Cumulative Gai
 
 We chose to evaluate at a relatively large N of 200. In a massive catalog of nearly 100,000 posts, a stricter N (e.g., N=10) would be too unforgiving and would likely result in zero scores for most models, obscuring any performance differences. `NDCG@200` provides a wider, more realistic window to evaluate a model's ability to rank relevant items highly, even if they don't appear in the absolute top positions. It allows us to differentiate between a model that ranks a relevant item at position 150 and one that fails to find it at all, a distinction that would be lost with a smaller N.
 
+### 3.4 Evaluation Results
+
+<div align="center">
+
+|Approach|NDCG@200|
+|---:|:---|
+|**<u>TF-IDF (baseline)​</u>**|0.0798|
+|**Neural Network**|0.0089​|
+|**SVM**|0.0645|
+|**Sentence-BERT**|0.0898​|
+|**LLM**|0.1083|
+|**Vector Negation**|0.2585​|
+
+</div>
+
+| ![Evaluation Results](img/cmp.png) |
+|:---:|
+|*The red dotted line for VN achieves overall high scores for many users where other models struggled. The LLM and TF-IDF models are still remarkable for users with consistent tastes, as seen with the user `daygloviking`. SVM and Neural Network continue to be relatively niche performers, but occasionally finding success for specific users* |
+
+### 3.5 Final Proposed System
+
+Our experiments demonstrated that no single model was universally superior for all users. The LLM-based approach excelled at understanding the nuanced content for users with consistent tastes, while the Vector Negation model proved the immense value of incorporating negative feedback and social proof. Taking all this into account, our final proposed system is a two-stage hybrid model. The goal was to combine the strengths of our best approaches while making it computationally efficient.
+
+**Stage 1: Candidate Retrieval**
+
+The first stage addresses the computational challenge of scoring over 95,000+ posts in real-time. In this stage, the system would select a smaller and more manageable set of a few hundred promising candidates. This would be achieved by combining two parallel methods:
+
+- **Semantic Retrieval:** Use a fast Approximate Nearest Neighbor (ANN) index (e.g., FAISS, ScaNN) on our pre-computed LLM embeddings to instantly find posts that are semantically similar to a user's recent upvotes.
+- **Popularity Retrieval:** Include a set of globally popular or trending posts to ensure novelty and address the cold-start problem for new users.
+
+**Stage 2: Personalized Re-ranking**
+
+The second stage takes the few hundred candidates from Stage 1 and applies a more sophisticated scoring model to produce the personalized ranked list for the user. This ranking model would be a hybrid that learns from multiple signals:
+
+- **Semantic Match (from LLM):** The core of the score would be the cosine similarity between a candidate post's LLM embedding and the user's time-aware taste profile.
+- **Negative Feedback (from Vector Negation):** The model would explicitly incorporate a "dissimilarity" score based on the candidate's similarity to the user's downvoted posts. This is the key insight from the Vector Negation model—to actively penalize content similar to what the user dislikes.
+- **Social Proof (from Vector Negation):** The model would use the post's existing popularity (its upvote count) as a feature, leveraging the "wisdom of the crowd" as a powerful signal of quality and engagement.
+
 ## 4 Reflection
 
 The process of developing this recommender system was a challenging within such limited time. Now with hindsight, many improvements could be made for better workflow and system performance.
@@ -327,7 +392,7 @@ The team's collective process of refining our evaluation methodology was a highl
 
 **The Limitations of Purely Content-Based Filtering**
 
-The most significant challenge was the inherent limitation of a purely content-based approach for this specific dataset. The frequent zero-scores in our results were not bugs, but rather a finding that for many users, taste is not easily captured by content similarity alone. The diverse and often unrelated nature of posts in r/Showerthoughts leads to "blurry" user profiles, making it incredibly difficult to predict specific future upvotes based on past ones.
+One major takeaway for us is that a purely content-based approach has its limits, especially for a dataset like this one. We found that content similarity alone often isn't enough to predict what a user will like. The frequent zero-scores in our results were not bugs, but rather a finding that for many users, taste is not easily captured by content similarity alone. The diverse and often unrelated nature of posts in r/Showerthoughts leads to "blurry" user profiles, making it incredibly difficult to predict specific future upvotes based on past ones.
 
 **Initial Misleading Metrics**
 
@@ -341,7 +406,7 @@ The biggest lesson I learned is that for a social platform like Reddit, collabor
 
 **Retrieve and Re-rank Pipeline**
 
-Scoring all 95,000+ posts for every user is computationally expensive and inefficient. A more practical and scalable approach would be a two-stage system. A fast, lightweight model (like an approximate nearest neighbor search on our LLM embeddings) could first retrieve a few hundred promising candidates. Then, a more complex and computationally intensive model could re-rank this much smaller set to produce the final, high-quality recommendation list.
+We also realized early on that our method of scoring all 95,000 posts for every user just wasn't scalable. It works for our experiment, but it would be far too slow and expensive in a live system. A more practical and scalable approach would be a two-stage system. A fast, lightweight model (like an approximate nearest neighbor search on our LLM embeddings) could first retrieve a few hundred promising candidates. Then, a more complex and computationally intensive model could re-rank this much smaller set to produce the final, high-quality recommendation list.
 
 **More Advanced User Profiling**
 
