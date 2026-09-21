@@ -1,8 +1,5 @@
 # AskReddit Project Report
 
-> **Author:** Bob
-> **zID:** z123456
-
 ## 1 Commercial System Analysis: Reddit's Recommendation Engine
 
 The primary commercial system for our recommendation scenario is Reddit's own multifaceted recommendation engine. It is designed to keep millions of users engaged by personalizing the content they see across the platform. Understanding its strengths and limitations is key to motivating our own project's proposal.
